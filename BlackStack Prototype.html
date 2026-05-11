@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>BlackStack — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:#1a1a1c;font-family:'Inter',system-ui,sans-serif;color:#f0ece2;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 30%, #2a2520, #0a0a0c 80%);overflow:hidden}
+  *{box-sizing:border-box}
+  ::-webkit-scrollbar{display:none}
+  *{scrollbar-width:none}
+
+  @keyframes fadeIn   {from{opacity:0}to{opacity:1}}
+  @keyframes slideUp  {from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes slideInR {from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
+  @keyframes slideInL {from{transform:translateX(-40px);opacity:0}to{transform:translateX(0);opacity:1}}
+  @keyframes dealIn   {from{transform:translate(-180px,-220px) rotate(-25deg);opacity:0}
+                       to  {transform:translate(0,0) rotate(0);opacity:1}}
+  @keyframes pulse    {0%{box-shadow:0 0 0 0 rgba(212,175,106,.45)}
+                       100%{box-shadow:0 0 0 18px rgba(212,175,106,0)}}
+  @keyframes shimmer  {0%{background-position:-200% 0}100%{background-position:200% 0}}
+  @keyframes flipIn   {from{transform:rotateY(180deg);opacity:0}to{transform:rotateY(0);opacity:1}}
+  @keyframes shakeX   {0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  @keyframes glowPos  {from{box-shadow:0 0 0 1.5px #7bb98c, 0 0 24px rgba(123,185,140,.35)}
+                       to  {box-shadow:0 0 0 1.5px transparent, 0 0 0 rgba(123,185,140,0)}}
+  @keyframes glowNeg  {from{box-shadow:0 0 0 1.5px #d77a7a, 0 0 24px rgba(215,122,122,.35)}
+                       to  {box-shadow:0 0 0 1.5px transparent, 0 0 0 rgba(215,122,122,0)}}
+  @keyframes countUp  {from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes ripple   {to{transform:scale(3);opacity:0}}
+
+  .anim-fade{animation:fadeIn .25s ease}
+  .anim-slideup{animation:slideUp .32s cubic-bezier(.2,.7,.2,1)}
+  .anim-slideR{animation:slideInR .28s cubic-bezier(.2,.7,.2,1)}
+  .anim-slideL{animation:slideInL .28s cubic-bezier(.2,.7,.2,1)}
+  .anim-pulse{animation:pulse 1.2s ease-out infinite}
+  .anim-shake{animation:shakeX .35s}
+  .anim-glow-pos{animation:glowPos 1.4s ease-out}
+  .anim-glow-neg{animation:glowNeg 1.4s ease-out}
+  .anim-count{animation:countUp .4s cubic-bezier(.2,.7,.2,1)}
+
+  .btn-press{transition:transform .12s ease, background .18s, border-color .18s}
+  .btn-press:active{transform:scale(.96)}
+
+  .tap-surface{position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent;cursor:pointer}
+  .tap-surface::after{content:'';position:absolute;inset:0;background:rgba(212,175,106,.15);
+    opacity:0;transition:opacity .2s}
+  .tap-surface:active::after{opacity:1;transition:opacity 0s}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="proto-frame.jsx"></script>
+<script type="text/babel" src="proto-trainer.jsx"></script>
+<script type="text/babel" src="proto-screens.jsx"></script>
+<script type="text/babel" src="proto-add.jsx"></script>
+<script type="text/babel" src="proto-app.jsx"></script>
+</body>
+</html>
