@@ -12,7 +12,7 @@
 - [x] **API tests** — Add integration coverage for auth, sessions, hands, user stats, and strategy endpoints
 - [ ] **Strategy content verification** — Confirm seeded scenarios and evaluator outputs against a reference basic-strategy chart
 - [x] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
-- [ ] **Docs template cleanup** — Rewrite architecture, database, deployment, runbook, and style-guide docs around the real app
+- [x] **Docs template cleanup** — Rewrite architecture, database, deployment, runbook, and style-guide docs around the real app
 - [ ] **Docs + verification slice** — Add a stronger manual smoke-test pass and document it
 
 ## Medium Priority
@@ -97,3 +97,4 @@
 - [x] Chunk 4 complete: responsive dashboard/trainer polish landed in the web app — 2026-05-14
 - [x] Docs slice complete: README and API reference refreshed for the live product — 2026-05-14
 - [x] Integration test slice complete: baseline API coverage added with Supertest + Bun — 2026-05-14
+- [x] Docs cleanup slice complete: template-heavy docs rewritten for the real app — 2026-05-14

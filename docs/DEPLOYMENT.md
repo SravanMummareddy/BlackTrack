@@ -1,147 +1,150 @@
-# Deployment Guide — [PROJECT_NAME]
+# Deployment Guide — BlackStack
 
----
+## Current Reality
 
-## Environments
+BlackStack is primarily being run locally right now.
 
-| Environment | Branch / Trigger | URL | DB |
-|---|---|---|---|
-| Development | Local | `localhost:3000` | Local Docker |
-| Staging | Push to `staging` | `staging.example.com` | Staging DB |
-| Production | Tag `v*.*.*` on `main` | `app.example.com` | Production DB |
+What is present in the repo:
+- a Bun + Express application
+- Prisma migrations
+- a Dockerfile
+- a Docker Compose file for local Postgres and Redis containers
 
----
+What is not yet fully defined in the repo:
+- a production hosting target
+- CI/CD workflows
+- staging environment automation
+- production secret management conventions beyond general guidance
 
-## Environment Setup
+This document therefore focuses on the deploy shape that the current codebase actually supports.
 
-### Local Development
+## Local Development Deployment
 
-1. Install dependencies
+Install dependencies:
+
 ```sh
 bun install
-bun run db:generate
 ```
 
-2. Copy and configure environment
+Set environment values:
+
 ```sh
 cp config/.env.example .env.local
-# Edit .env.local with your local values
 ```
 
-3. Start infrastructure
+Start local database:
+
 ```sh
-docker compose -f docker/docker-compose.yml up -d postgres redis
+docker compose -f docker/docker-compose.yml up -d postgres
 ```
 
-4. Run database migrations
+Apply migrations:
+
 ```sh
 bun run db:migrate
 ```
 
-5. Start the app
+Seed strategy scenarios:
+
+```sh
+bun run seed:strategy
+```
+
+Run the app:
+
 ```sh
 bun run dev
 ```
 
-Or use the convenience script: `./scripts/dev.sh`
+Primary local URLs:
+- app: `http://localhost:3000/`
+- API: `http://localhost:3000/api/v1`
+- health: `http://localhost:3000/api/v1/health`
 
----
+## Docker Notes
 
-### Staging Setup
+The repo includes:
+- `docker/Dockerfile`
+- `docker/docker-compose.yml`
 
-Environment variables are injected via CI/CD secrets (GitHub Actions / Railway / Render).
+Current compose services:
+- `postgres`
+- `redis`
+- `app`
 
-Required secrets:
+Important note:
+- the current application code does not depend on Redis for core runtime behavior, even though Redis is still present in `docker-compose.yml`
+
+## Environment Variables
+
+Current required values for normal app operation:
 - `DATABASE_URL`
-- `REDIS_URL`
 - `JWT_SECRET`
 - `JWT_REFRESH_SECRET`
 
-Deployment steps (automated on push to `staging`):
-1. Build Docker image
-2. Run `bun run db:migrate:deploy`
-3. Deploy new image
-4. Health check: `GET /api/health`
+Common optional or convenience values:
+- `PORT`
+- `NODE_ENV`
+- `LOG_LEVEL`
 
----
+## Migration Procedure
 
-### Production Setup
-
-Same as staging. Additional requirements:
-- Manual approval gate before migrations
-- Database backup before any migration
-- Blue/green or rolling deployment to avoid downtime
-
----
-
-## Secrets Management
-
-Never commit secrets to git. Use:
-- **Local**: `.env.local` (gitignored)
-- **Staging/Prod**: CI/CD secret manager (GitHub Secrets, Railway, AWS Secrets Manager)
-
-To rotate a secret:
-1. Add the new value to the secret manager
-2. Update the app to accept both old and new (if needed for rotation window)
-3. Deploy
-4. Remove the old value
-
----
-
-## Database Migrations on Deploy
+Development schema changes:
 
 ```sh
-# Always run before starting the new app version
+bun run db:migrate
+```
+
+Apply committed migrations in a deploy-like flow:
+
+```sh
 bun run db:migrate:deploy
 ```
 
-This is safe to run multiple times — Prisma tracks which migrations have been applied.
+Recommended order:
+1. update code
+2. apply migrations
+3. seed strategy scenarios if scenario logic changed
+4. start or restart the app
+5. verify health
 
-For destructive migrations (table drops, column removals):
-1. Deploy code that works with both old and new schema
-2. Run migration
-3. Deploy code that uses new schema only
+## Health Verification
 
----
-
-## Rollback Procedure
-
-### Application Rollback
-Re-deploy the previous Docker image version.
-
-### Database Rollback
-Prisma does not have automatic rollback. Options:
-1. Apply the inverse migration manually (e.g., re-add dropped column)
-2. Restore from the pre-migration backup
-
-This is why: **always back up before migrations** and **write reversible migrations**.
-
----
-
-## Health Check
-
-After every deployment, verify:
-```sh
-curl https://your-domain.com/api/health
-```
-
-Expected response: `{ "status": "ok", ... }`
-
-If status is `error`, check logs and rollback if needed.
-
----
-
-## Docker Build and Deploy
+Check health:
 
 ```sh
-# Build production image
-docker build -t [project-name]:latest .
-
-# Run locally to test
-docker run -p 3000:3000 \
-  -e DATABASE_URL=... \
-  -e JWT_SECRET=... \
-  [project-name]:latest
+curl http://localhost:3000/api/v1/health
+curl http://localhost:3000/api/v1/health/live
 ```
 
-See `docker/Dockerfile` for the multi-stage build configuration.
+Expected liveness response:
+
+```json
+{ "status": "ok" }
+```
+
+## Production Planning Notes
+
+If you deploy this app to a hosted environment later, keep these assumptions:
+- Express serves both API and static web app
+- PostgreSQL is required
+- Prisma migrations must run before traffic flips
+- seeded strategy data should exist before trainer use
+
+Before calling production ready, add:
+1. a defined hosting target
+2. CI/CD workflows
+3. environment-specific secrets handling
+4. backup and rollback procedures
+5. separate test and production databases
+
+## Current Gaps
+
+This repo does not yet define:
+- branch-based deployment rules
+- staging URLs
+- production URLs
+- automated rollback tooling
+- infrastructure-as-code
+
+Treat deployment as local-first until those pieces are deliberately added.

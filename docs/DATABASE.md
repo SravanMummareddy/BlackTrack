@@ -1,125 +1,227 @@
-# Database Documentation — [PROJECT_NAME]
+# Database Documentation — BlackStack
 
----
+## Database Stack
 
-## Schema Overview
+- Engine: PostgreSQL
+- ORM: Prisma
+- Schema file: `prisma/schema.prisma`
+- Migrations: `prisma/migrations/`
 
-| Table | Purpose | Key Columns |
-|---|---|---|
-| `users` | User accounts | `id`, `email`, `role`, `active` |
-| `refresh_tokens` | JWT refresh tokens | `user_id`, `token_hash`, `expires_at` |
-| `posts` | Example domain table | `author_id`, `status`, `published_at` |
+Local Docker defaults currently use:
 
-Full schema: `.shared/schemas/database-schema.sql`
-Prisma schema: `prisma/schema.prisma`
-
----
-
-## Table Relationships
-
-```
-users (1) ──── (many) refresh_tokens
-users (1) ──── (many) posts
+```text
+postgresql://postgres:postgres@localhost:5432/appdb
 ```
 
-All foreign keys have `ON DELETE CASCADE` — deleting a user removes their tokens and posts.
+## Current Schema Overview
 
----
+### `User`
 
-## Migration Strategy
+Stores identity and authentication fields.
 
-### Development
+Key columns:
+- `id`
+- `email`
+- `name`
+- `passwordHash`
+- `oauthProvider`
+- `oauthId`
+- `role`
+- timestamps
+
+Relationships:
+- one user has many `CasinoSession`
+- one user has many `StrategyAttempt`
+
+### `CasinoSession`
+
+Represents one blackjack session for one user.
+
+Key columns:
+- `casinoName`
+- `tableMin`
+- `tableMax`
+- `decks`
+- `buyIn`
+- `cashOut`
+- `status`
+- `notes`
+- `handsPlayed`
+- `handsWon`
+- `startedAt`
+- `endedAt`
+
+Relationships:
+- belongs to one `User`
+- has many `Hand`
+
+### `Hand`
+
+Represents one logged blackjack hand within a session.
+
+Key columns:
+- `handNumber`
+- `bet`
+- `result`
+- `playerCards`
+- `dealerCards`
+- `playerTotal`
+- `dealerTotal`
+- `splitHand`
+- `doubled`
+- `surrendered`
+- `payout`
+- `playedAt`
+
+Relationship:
+- belongs to one `CasinoSession`
+
+### `StrategyScenario`
+
+Represents a training prompt in the basic strategy drill.
+
+Key columns:
+- `playerCards`
+- `dealerUpcard`
+- `playerTotal`
+- `isSoft`
+- `isPair`
+- `correctAction`
+- `difficulty`
+
+Relationship:
+- has many `StrategyAttempt`
+
+### `StrategyAttempt`
+
+Stores a user’s answer to a scenario.
+
+Key columns:
+- `action`
+- `correct`
+- `timeMs`
+- `attemptedAt`
+
+Relationships:
+- belongs to one `User`
+- belongs to one `StrategyScenario`
+
+## Relationship Summary
+
+```text
+User 1 -> many CasinoSession
+CasinoSession 1 -> many Hand
+User 1 -> many StrategyAttempt
+StrategyScenario 1 -> many StrategyAttempt
+```
+
+Cascade rules currently matter in these places:
+- deleting a user deletes sessions and attempts
+- deleting a session deletes hands
+- deleting a scenario deletes attempts
+
+## Money and Stats Conventions
+
+Important data rules:
+- all money is stored as integer cents
+- `payout` on a hand is net result, not returned chips
+- session `netProfit` is derived from `cashOut - buyIn`
+- user bankroll stats aggregate across sessions and hands
+
+## Indexes
+
+Current important indexes from the Prisma schema:
+- `User.email`
+- `User.oauthProvider + oauthId`
+- `CasinoSession.userId`
+- `CasinoSession.startedAt`
+- `Hand.sessionId`
+- `Hand.playedAt`
+- `StrategyAttempt.userId`
+- `StrategyAttempt.scenarioId`
+- `StrategyAttempt.attemptedAt`
+
+Unique constraints:
+- `User.email`
+- `StrategyScenario(playerCards, dealerUpcard, isSoft, isPair)`
+
+## Migrations
+
+Create and apply a development migration:
+
 ```sh
-# Create a migration from schema changes
-bun run db:migrate -- --name describe_what_changed
-
-# Apply without creating a new migration (reset dev DB)
-bun run db:migrate -- reset
+bun run db:migrate
 ```
 
-### Staging / Production
+Apply existing migrations without creating a new one:
+
 ```sh
-# Apply pending migrations only (no schema changes)
 bun run db:migrate:deploy
 ```
 
-### Rules
-1. Never edit existing migration files — create new ones.
-2. Always test migrations on a copy of production data before applying to prod.
-3. Every destructive migration (DROP, column removal) needs a corresponding rollback plan.
-4. Migration names: `describe_what_changed` (lowercase, underscores)
-
----
-
-## Backup Strategy
-
-### Development
-Not required — use `bunx prisma migrate reset` to rebuild.
-
-### Production
-- Automated daily snapshots via PostgreSQL's `pg_dump` or cloud provider snapshots.
-- Retain backups for 30 days.
-- Test restore procedure monthly.
-- Point-in-time recovery via WAL archiving for critical data.
+Generate Prisma client:
 
 ```sh
-# Manual backup
-pg_dump $DATABASE_URL -Fc -f backup_$(date +%Y%m%d).dump
-
-# Restore
-pg_restore -d $DATABASE_URL backup_20240115.dump
+bun run db:generate
 ```
 
----
+Open Prisma Studio:
 
-## Performance Considerations
-
-### Indexes
-
-All indexes are defined in `.shared/schemas/database-schema.sql`. Key ones:
-
-- `users.email` — unique, used for login lookups
-- `posts(author_id, status, created_at DESC)` — composite for the most common query pattern
-- Partial index on `users(email) WHERE deleted_at IS NULL` for soft-delete patterns
-
-### Connection Pooling
-
-See `.shared/skills/database-patterns/connection-pooling.md`.
-
-Default: `connection_limit=10` per app instance.
-
-### Query Performance
-
-Run EXPLAIN ANALYZE for any query taking > 100ms:
-```sql
-EXPLAIN ANALYZE SELECT * FROM posts WHERE author_id = 'abc' ORDER BY created_at DESC LIMIT 20;
+```sh
+bun run db:studio
 ```
 
-Slow query log: set `log_min_duration_statement = 500` in PostgreSQL config.
+Migration rules:
+1. Never edit committed migration SQL in place.
+2. Add new migrations for schema changes.
+3. Verify destructive changes against real data needs first.
+4. Keep seed logic aligned with runtime rules when touching strategy data.
 
----
+## Seed Data
 
-## Common Queries
+Current seed script:
 
-```typescript
-// Get user with post count
-const user = await prisma.user.findUnique({
-  where: { id },
-  include: { _count: { select: { posts: true } } },
+```sh
+bun run seed:strategy
+```
+
+This script:
+- generates strategy scenarios from the same rule tables used at runtime
+- is intended to be idempotent
+- should be rerun after changing strategy tables or scenario-generation logic
+
+## Operational Notes
+
+- There is no Redis-backed persistence requirement for the current app.
+- The integration test suite expects a migrated local Postgres database.
+- The repo currently uses one shared local database by default rather than a dedicated ephemeral test database.
+
+## Useful Query Patterns
+
+Get sessions for a user, newest first:
+
+```ts
+await prisma.casinoSession.findMany({
+  where: { userId },
+  orderBy: { startedAt: 'desc' },
 });
+```
 
-// Get published posts for a user, newest first, paginated
-const posts = await prisma.post.findMany({
-  where: { authorId: userId, status: 'PUBLISHED' },
-  orderBy: { createdAt: 'desc' },
-  take: pageSize,
-  skip: (page - 1) * pageSize,
-  select: { id: true, title: true, publishedAt: true },
+Get all hands for a session:
+
+```ts
+await prisma.hand.findMany({
+  where: { sessionId },
+  orderBy: { handNumber: 'asc' },
 });
+```
 
-// Soft delete (if using deletedAt pattern)
-await prisma.user.update({
-  where: { id },
-  data: { deletedAt: new Date() },
+Aggregate strategy progress:
+
+```ts
+await prisma.strategyAttempt.aggregate({
+  where: { userId },
+  _count: { _all: true },
+  _avg: { timeMs: true },
 });
 ```

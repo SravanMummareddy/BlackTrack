@@ -33,14 +33,14 @@ Design exploration is complete and the backend is partially operational. Three p
 - [x] Chunk 4 completed: dashboard and trainer layouts were refined for desktop/tablet, with quick actions, active-session focus, and a safer hand-log shortcut
 - [x] Docs slice completed: `README.md` and `docs/API.md` now reflect the real Blackjack tracker + trainer application
 - [x] Integration test slice completed: auth, sessions, hands, user stats, and strategy flows now have a real API integration test
+- [x] Docs cleanup slice completed: architecture, database, deployment, runbook, and style guide docs now reflect the current app instead of templates
 
 ---
 
 ## In Progress
 
 - [ ] Responsive web app implementation in small vertical slices
-- [ ] Chunk 5 — remaining docs cleanup and final polish
-- [ ] Template docs cleanup for architecture, database, deployment, runbook, and style guide
+- [ ] Chunk 5 — final product polish and remaining feature work
 
 ---
 
@@ -79,15 +79,16 @@ Trainer run:      2026-05-14 — random scenario, attempt submission, and progre
 UI polish run:    2026-05-14 — responsive dashboard/trainer layout refinements applied; client syntax verified
 Docs run:         2026-05-14 — `README.md` and `docs/API.md` refreshed to match the live backend and web app
 Test run:         2026-05-14 — integration suite passed with 4 tests / 48 assertions against local Postgres after applying migrations
+Docs cleanup:     2026-05-14 — architecture, database, deployment, runbook, and style guide docs rewritten around the real app
 ```
 
 ---
 
 ## Next Steps for Incoming Agent
 
-1. Complete Chunk 5: clean up the remaining template-heavy docs and final polish
-2. Refresh `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/DEPLOYMENT.md`, and `docs/RUNBOOK.md` so they stop describing placeholder infrastructure
-3. Decide whether to split the single integration test into smaller focused files as coverage grows
+1. Complete Chunk 5: final product polish and the next real feature slice
+2. Decide whether to split the single integration test into smaller focused files as coverage grows
+3. Add stronger analytics, streaks, or other user-facing features rather than more template cleanup
 4. Continue shipping in small vertical slices with git checkpoints after each usable milestone
 
 ---
@@ -102,4 +103,4 @@ Test run:         2026-05-14 — integration suite passed with 4 tests / 48 asse
 - Work should be delivered in smaller chunks with regular git checkpoints and markdown updates.
 - Trainer progress now uses real measured response time from scenario load until answer submission.
 - Dashboard shortcuts now explicitly load the active session before opening the hand logger to avoid logging against stale selection state.
-- `README.md` and `docs/API.md` are current; the other docs still contain placeholder references to Redis, generic posts data, or example deployments.
+- Core docs are now aligned to the real app; the biggest remaining gaps are product depth and polish rather than documentation drift.

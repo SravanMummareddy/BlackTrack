@@ -65,9 +65,10 @@ Current status of `public/`:
 - sessions workspace now supports selection, create session, complete session, and hand logging against the live API
 - trainer workspace now supports auto-loading scenarios, attempt submission, live progress metrics, next-hand flow, and a responsive reference sidebar
 - dashboard now includes active-session focus, quick actions, and improved desktop/tablet composition
-- `README.md` and `docs/API.md` now describe the real app; several deeper docs still need template cleanup
+- `README.md`, `docs/API.md`, and the core architecture/operations docs now describe the real app
 - baseline API integration coverage now exists in `tests/integration/api.integration.test.ts`
-- next major slice is remaining docs cleanup and final polish
+- core docs now describe the real app instead of generic templates
+- next major slice is final polish and the next user-facing feature set
 
 ---
 
@@ -91,9 +92,9 @@ Business logic layer. **This is where most BlackStack work happens.**
 - Analytics aggregations beyond overall bankroll stats are still TBD
 
 ### `src/database/`
-Prisma singleton + connection pool config. Redis client TBD.
+Prisma singleton + DB health helpers.
 - `index.ts` — Prisma singleton (hot-reload safe)
-- `pool.ts` — pool config per environment
+- `schema.ts` — database health and migration status helpers
 
 ### `src/middleware/`
 - `requestId`, `requestLogger`, `authenticate`, `optionalAuth`, `errorHandler`
