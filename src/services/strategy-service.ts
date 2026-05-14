@@ -372,7 +372,8 @@ function buildHardCards(total: number): string[] {
   if (total === 9) return ['5', '4'];
   if (total === 8) return ['5', '3'];
   if (total === 7) return ['4', '3'];
-  return ['4', '2'];
+  if (total === 6) return ['4', '2'];
+  return ['3', '2']; // total === 5
 }
 
 function getDifficulty(total: number, isSoft: boolean, isPair: boolean): number {
