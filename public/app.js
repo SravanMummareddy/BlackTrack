@@ -15,6 +15,7 @@ const state = {
   trainerProgress: null,
   trainerFeedback: null,
   trainerFilter: "mix",
+  trainerStartedAt: null,
   currentView: "dashboard",
   loading: {
     app: true,
@@ -442,6 +443,12 @@ function renderTrainerView() {
           ${renderTrainerFilter("soft", "Soft")}
           ${renderTrainerFilter("pair", "Pairs")}
         </div>
+        <div class="trainer-stats-grid">
+          ${renderDetailStat("Attempts", formatCount(state.trainerProgress?.attempts))}
+          ${renderDetailStat("Correct", formatCount(state.trainerProgress?.correct))}
+          ${renderDetailStat("Accuracy", formatPercent(state.trainerProgress?.accuracy))}
+          ${renderDetailStat("Avg Time", formatDuration(state.trainerProgress?.averageResponseTimeMs))}
+        </div>
         <div class="board-surface">
           ${state.loading.trainer ? `
             <div class="empty-state">
@@ -508,6 +515,9 @@ function renderTrainerFeedback() {
       <strong>${feedback.correct ? "Correct play." : `Best play: ${feedback.correctAction}`}</strong>
       <p>${escapeHtml(feedback.reasoning)}</p>
       <p class="helper"><strong>Rule of thumb:</strong> ${escapeHtml(feedback.ruleOfThumb)}</p>
+      <div class="toolbar">
+        <button class="primary-btn" data-action="new-scenario">Next hand</button>
+      </div>
     </div>
   `;
 }
@@ -858,6 +868,9 @@ async function onActionClick(event) {
   if (action === "switch-view") {
     state.currentView = event.currentTarget.dataset.view;
     render();
+    if (state.currentView === "trainer" && !state.trainerScenario && !state.loading.trainer) {
+      await loadTrainerScenario();
+    }
     return;
   }
 
@@ -1085,11 +1098,13 @@ async function updateProfile(formData) {
 async function loadTrainerScenario() {
   state.loading.trainer = true;
   state.trainerFeedback = null;
+  state.trainerStartedAt = null;
   render();
 
   try {
     const query = buildTrainerQuery();
     state.trainerScenario = await api(`/strategy/scenarios/random${query}`);
+    state.trainerStartedAt = Date.now();
   } catch (error) {
     addNotice(error.message || "Could not load a trainer scenario.", "error");
   } finally {
@@ -1108,7 +1123,7 @@ async function submitTrainerAttempt(action) {
     body: JSON.stringify({
       scenarioId: state.trainerScenario.id,
       action,
-      timeMs: Math.floor(Math.random() * 1800) + 600,
+      timeMs: state.trainerStartedAt ? Math.max(250, Date.now() - state.trainerStartedAt) : 1000,
     }),
   });
 

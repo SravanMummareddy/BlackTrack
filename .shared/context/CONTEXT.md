@@ -7,7 +7,7 @@
 
 ## Current State Summary
 
-Design exploration is complete and the backend is partially operational. Three prototype iterations still live in `design/` (wireframes → prototype → v2), and `design/prototype.html` is the currently accepted visual/interaction reference. The Express/Prisma backend supports auth, sessions, nested hand logging, overall bankroll stats, and strategy training endpoints. A real responsive web app has now been started under `public/` and is being served by Express, but it is only at the application-shell stage and is not feature-complete yet.
+Design exploration is complete and the backend is partially operational. Three prototype iterations still live in `design/` (wireframes → prototype → v2), and `design/prototype.html` is the currently accepted visual/interaction reference. The Express/Prisma backend supports auth, sessions, nested hand logging, overall bankroll stats, and strategy training endpoints. A real responsive web app is now being built under `public/`, served by Express, and has working auth, sessions, and trainer slices, but it is not feature-complete yet.
 
 **Branch**: `main`
 **Last commit**: Initial commit + skeleton + design reorganization
@@ -29,13 +29,14 @@ Design exploration is complete and the backend is partially operational. Three p
 - [x] Express now serves the web app shell from `/`
 - [x] Chunk 1 completed: `/` serves correctly and auth register/login/refresh/logout flows were validated against the live API
 - [x] Chunk 2 completed: sessions workspace flow validated for session selection, create session, log hand, complete session, and session stats refresh
+- [x] Chunk 3 completed: trainer workspace now auto-loads a hand on entry, tracks real response time, surfaces progress metrics, and advances directly to the next hand
 
 ---
 
 ## In Progress
 
 - [ ] Responsive web app implementation in small vertical slices
-- [ ] Chunk 3 — trainer workspace (scenario, answer flow, progress, chart polish)
+- [ ] Chunk 4 — responsive polish, dashboard refinement, and chart/reference fit-and-finish
 - [ ] API test coverage
 - [ ] Docs/API reference refresh
 
@@ -59,7 +60,7 @@ Design exploration is complete and the backend is partially operational. Three p
 - `scripts/seed-strategy.ts` — idempotent seed script based on the shared strategy tables
 - `public/index.html` — initial web app HTML entrypoint
 - `public/styles.css` — responsive design system and application shell styling
-- `public/app.js` — initial client-side app state, auth flow, dashboard/session/trainer shell logic
+- `public/app.js` — client-side app state, auth flow, dashboard/session logic, and live trainer interaction flow
 - `design/prototype*.html/jsx` — restored to original prototype behavior after reverting API-coupled experiment
 
 ---
@@ -72,16 +73,17 @@ Integration:      Not run
 Coverage:         Unknown
 Last run:         2026-05-14 — `bun run typecheck` passing; `/` verified by curl; auth flows verified by live API requests
 Sessions run:     2026-05-14 — create session, log hand, complete session, list session, and fetch session stats verified by live API requests
+Trainer run:      2026-05-14 — random scenario, attempt submission, and progress metrics verified by live API requests
 ```
 
 ---
 
 ## Next Steps for Incoming Agent
 
-1. Complete Chunk 3: trainer interactivity, progress, and chart/reference flows in the web app
+1. Complete Chunk 4: responsive polish, dashboard refinement, and chart/reference fit-and-finish in the web app
 2. Add integration tests for auth, session lifecycle, hands, user stats, and strategy endpoints
 3. Refresh `docs/API.md`, `README.md`, and product-facing docs once the first usable web slice is stable
-4. Continue responsive polish across mobile/tablet/desktop after trainer flow is complete
+4. Continue shipping in small vertical slices with git checkpoints after each usable milestone
 
 ---
 
@@ -93,3 +95,4 @@ Sessions run:     2026-05-14 — create session, log hand, complete session, lis
 - The user explicitly wants the original prototype/frontend preserved as reference while the real web app is built separately.
 - No automated endpoint tests have been added yet, so behavior is only compiler-verified right now.
 - Work should be delivered in smaller chunks with regular git checkpoints and markdown updates.
+- Trainer progress now uses real measured response time from scenario load until answer submission.

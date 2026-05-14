@@ -7,7 +7,8 @@
 - [x] **Responsive web app shell** — Make `/` load a stable, working desktop/mobile web interface from `public/`
 - [x] **Auth + dashboard slice** — Sign in/register, load `/users/me`, `/users/me/stats`, and render a working landing dashboard
 - [x] **Sessions workspace slice** — Create session, list sessions, session detail, complete session, and hand logging
-- [ ] **Trainer workspace slice** — Random scenario, attempt submission, progress panel, chart/reference view
+- [x] **Trainer workspace slice** — Random scenario, attempt submission, progress panel, chart/reference view
+- [ ] **Responsive polish slice** — Improve desktop/tablet layout, dashboard hierarchy, and trainer/session fit-and-finish
 - [ ] **API tests** — Add integration coverage for auth, sessions, hands, user stats, and strategy endpoints
 - [ ] **Strategy content verification** — Confirm seeded scenarios and evaluator outputs against a reference basic-strategy chart
 - [ ] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
@@ -66,7 +67,8 @@
 ### Phase 4 — Learn Core
 - [x] Basic strategy engine ported to `src/services/strategy-service.ts`
 - [x] Strategy scenario/progress API
-- [ ] Responsive trainer UI in the web app
+- [x] Responsive trainer UI in the web app
+- [ ] Trainer chart/reference polish
 - [ ] Streak + accuracy tracking
 - [ ] Mistakes queue
 
@@ -89,3 +91,4 @@
 - [x] Real web app scaffold started under `public/` and served by Express — 2026-05-14
 - [x] Chunk 1 complete: `/` serves, auth shell works, and auth endpoints were validated live — 2026-05-14
 - [x] Chunk 2 complete: session workspace flows validated against the live API — 2026-05-14
+- [x] Chunk 3 complete: trainer interaction flow validated against the live API — 2026-05-14
