@@ -62,7 +62,8 @@ Current status of `public/`:
 - `/` is served by Express
 - auth shell is wired to the live API
 - dashboard shell hydrates from `/users/me`, `/users/me/stats`, `/sessions`, and `/strategy/progress`
-- next major slice is the sessions workspace UX
+- sessions workspace now supports selection, create session, complete session, and hand logging against the live API
+- next major slice is trainer interaction and reference polish
 
 ---
 

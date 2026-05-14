@@ -882,8 +882,9 @@ async function onActionClick(event) {
   }
 
   if (action === "select-session") {
-    await loadSessionDetails(event.currentTarget.dataset.sessionId);
     state.currentView = "sessions";
+    render();
+    await loadSessionDetails(event.currentTarget.dataset.sessionId);
     return;
   }
 
@@ -1013,6 +1014,7 @@ async function createSession(formData) {
 
   state.sessions.unshift({ ...data, netProfit: null });
   state.selectedSessionId = data.id;
+  state.currentView = "sessions";
   addNotice(`Created session at ${data.casinoName}.`, "success");
   await hydrateApp();
 }
@@ -1031,6 +1033,7 @@ async function completeSession(formData) {
   });
 
   addNotice("Session completed.", "success");
+  state.currentView = "sessions";
   await hydrateApp();
 }
 
@@ -1058,6 +1061,7 @@ async function logHand(formData) {
   });
 
   addNotice("Hand saved.", "success");
+  state.currentView = "sessions";
   await loadSessionDetails(state.selectedSessionId);
   const [stats] = await Promise.all([api("/users/me/stats")]);
   state.stats = stats;
@@ -1114,11 +1118,28 @@ async function submitTrainerAttempt(action) {
 }
 
 function openModal(name) {
+  primeModal(name);
   document.querySelector(`[data-modal="${name}"]`)?.classList.add("open");
 }
 
 function closeModal(name) {
   document.querySelector(`[data-modal="${name}"]`)?.classList.remove("open");
+}
+
+function primeModal(name) {
+  if (name === "session-complete" && state.selectedSession) {
+    const input = document.querySelector("#complete-cashout");
+    if (input) {
+      input.value = String(Math.round((state.selectedSession.buyIn ?? 0) / 100));
+    }
+  }
+
+  if (name === "hand-log") {
+    const bet = document.querySelector("#hand-bet");
+    if (bet && state.selectedSession) {
+      bet.value = String(Math.round((state.selectedSession.tableMin ?? 0) / 100));
+    }
+  }
 }
 
 function buildTrainerQuery() {

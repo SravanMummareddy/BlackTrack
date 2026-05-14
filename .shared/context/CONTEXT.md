@@ -28,13 +28,14 @@ Design exploration is complete and the backend is partially operational. Three p
 - [x] Responsive web app shell started in `public/index.html`, `public/styles.css`, and `public/app.js`
 - [x] Express now serves the web app shell from `/`
 - [x] Chunk 1 completed: `/` serves correctly and auth register/login/refresh/logout flows were validated against the live API
+- [x] Chunk 2 completed: sessions workspace flow validated for session selection, create session, log hand, complete session, and session stats refresh
 
 ---
 
 ## In Progress
 
 - [ ] Responsive web app implementation in small vertical slices
-- [ ] Chunk 2 — sessions workspace (list/detail/create/complete/log hand)
+- [ ] Chunk 3 — trainer workspace (scenario, answer flow, progress, chart polish)
 - [ ] API test coverage
 - [ ] Docs/API reference refresh
 
@@ -70,16 +71,17 @@ Unit tests:       Not run
 Integration:      Not run
 Coverage:         Unknown
 Last run:         2026-05-14 — `bun run typecheck` passing; `/` verified by curl; auth flows verified by live API requests
+Sessions run:     2026-05-14 — create session, log hand, complete session, list session, and fetch session stats verified by live API requests
 ```
 
 ---
 
 ## Next Steps for Incoming Agent
 
-1. Complete Chunk 2: sessions workspace with live session list, session detail, create session, complete session, and hand logging
-2. Complete Chunk 3: trainer interactivity, progress, and chart/reference flows in the web app
-3. Add integration tests for auth, session lifecycle, hands, user stats, and strategy endpoints
-4. Refresh `docs/API.md`, `README.md`, and product-facing docs once the first usable web slice is stable
+1. Complete Chunk 3: trainer interactivity, progress, and chart/reference flows in the web app
+2. Add integration tests for auth, session lifecycle, hands, user stats, and strategy endpoints
+3. Refresh `docs/API.md`, `README.md`, and product-facing docs once the first usable web slice is stable
+4. Continue responsive polish across mobile/tablet/desktop after trainer flow is complete
 
 ---
 
