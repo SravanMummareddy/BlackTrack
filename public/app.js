@@ -309,6 +309,8 @@ function renderCurrentView() {
 }
 
 function renderDashboardView() {
+  const activeSession = state.sessions.find((session) => session.status === "ACTIVE");
+
   return `
     <section>
       <div class="section-head">
@@ -329,7 +331,69 @@ function renderDashboardView() {
         ${renderStatCard("Total Payout", formatMoney(state.stats?.totalPayout), toneClass(state.stats?.totalPayout))}
       </div>
     </section>
-    <section class="sessions-grid">
+    <section class="dashboard-grid">
+      <article class="session-card dashboard-spotlight">
+        <div class="section-head">
+          <div>
+            <h2>Current Focus</h2>
+            <p>Jump straight back into the table session or strategy drill that matters right now.</p>
+          </div>
+          <span class="pill gold">Live</span>
+        </div>
+        ${activeSession ? `
+          <div class="focus-stack">
+            <div class="focus-card">
+              <label class="muted-label">Active Session</label>
+              <h3>${escapeHtml(activeSession.casinoName)}</h3>
+              <p>${formatDateTime(activeSession.startedAt)} · ${activeSession.decks}-deck table · ${formatMoney(activeSession.tableMin)} minimum</p>
+              <div class="detail-grid compact">
+                ${renderDetailStat("Buy-In", formatMoney(activeSession.buyIn))}
+                ${renderDetailStat("Hands", formatCount(activeSession.handsPlayed))}
+              </div>
+              <div class="toolbar">
+                <button class="primary-btn" data-action="select-session" data-session-id="${activeSession.id}">Open session</button>
+                <button class="ghost-btn" data-action="open-hand-log" data-session-id="${activeSession.id}">Log hand</button>
+              </div>
+            </div>
+          </div>
+        ` : `
+          <div class="focus-stack">
+            <div class="focus-card">
+              <label class="muted-label">No Active Session</label>
+              <h3>Ready for the next casino visit</h3>
+              <p>Create a new session when you sit down, or spend a few reps in the trainer before your next table.</p>
+              <div class="toolbar">
+                <button class="primary-btn" data-action="open-modal" data-modal="session-create">Start session</button>
+                <button class="ghost-btn" data-action="switch-view" data-view="trainer">Train first</button>
+              </div>
+            </div>
+          </div>
+        `}
+      </article>
+      <article class="session-card dashboard-actions">
+        <div class="section-head">
+          <div>
+            <h2>Quick Actions</h2>
+            <p>Keep the most common bankroll and practice flows one click away.</p>
+          </div>
+        </div>
+        <div class="action-stack">
+          <button class="nav-btn quick-action" data-action="open-modal" data-modal="session-create">
+            <span>New Session</span>
+            <small>Capture table limits, buy-in, and notes before you start.</small>
+          </button>
+          <button class="nav-btn quick-action" data-action="switch-view" data-view="sessions">
+            <span>Review Sessions</span>
+            <small>Inspect recent results, complete open sessions, and audit hand history.</small>
+          </button>
+          <button class="nav-btn quick-action" data-action="switch-view" data-view="trainer">
+            <span>Run Trainer</span>
+            <small>Drill hard totals, soft totals, and pairs against your live progress data.</small>
+          </button>
+        </div>
+      </article>
+    </section>
+    <section class="sessions-grid dashboard-lower-grid">
       <article class="session-card">
         <div class="section-head">
           <div>
@@ -464,12 +528,16 @@ function renderTrainerView() {
         </div>
         ${state.trainerFeedback ? renderTrainerFeedback() : ""}
       </article>
-      <aside class="trainer-card">
+      <aside class="trainer-card trainer-aside">
         <div class="section-head">
           <div>
             <h2>Reference</h2>
             <p>Quick-glance basic strategy chart from the same rules used to seed the API.</p>
           </div>
+        </div>
+        <div class="feedback info">
+          <strong>Reading the chart</strong>
+          <p>Use the filter to focus your reps, then compare the action codes against the chart only after you commit to an answer.</p>
         </div>
         ${renderChartPreview()}
       </aside>
@@ -898,6 +966,16 @@ async function onActionClick(event) {
     state.currentView = "sessions";
     render();
     await loadSessionDetails(event.currentTarget.dataset.sessionId);
+    return;
+  }
+
+  if (action === "open-hand-log") {
+    const sessionId = event.currentTarget.dataset.sessionId;
+    if (!sessionId) return;
+    state.currentView = "sessions";
+    render();
+    await loadSessionDetails(sessionId);
+    openModal("hand-log");
     return;
   }
 

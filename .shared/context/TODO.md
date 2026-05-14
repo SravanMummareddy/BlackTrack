@@ -8,10 +8,11 @@
 - [x] **Auth + dashboard slice** — Sign in/register, load `/users/me`, `/users/me/stats`, and render a working landing dashboard
 - [x] **Sessions workspace slice** — Create session, list sessions, session detail, complete session, and hand logging
 - [x] **Trainer workspace slice** — Random scenario, attempt submission, progress panel, chart/reference view
-- [ ] **Responsive polish slice** — Improve desktop/tablet layout, dashboard hierarchy, and trainer/session fit-and-finish
+- [x] **Responsive polish slice** — Improve desktop/tablet layout, dashboard hierarchy, and trainer/session fit-and-finish
 - [ ] **API tests** — Add integration coverage for auth, sessions, hands, user stats, and strategy endpoints
 - [ ] **Strategy content verification** — Confirm seeded scenarios and evaluator outputs against a reference basic-strategy chart
 - [ ] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
+- [ ] **Docs + verification slice** — Refresh README/API docs and add a stronger manual smoke-test pass
 
 ## Medium Priority
 
@@ -58,7 +59,7 @@
 
 ### Phase 3 — Analytics
 - [x] Overall bankroll stats endpoint
-- [ ] Dashboard + analytics UI in the web app
+- [x] Dashboard shell + responsive overview UI in the web app
 - [ ] Period-based stats
 - [ ] Budget ring computation
 - [ ] Mood × result aggregation
@@ -68,7 +69,7 @@
 - [x] Basic strategy engine ported to `src/services/strategy-service.ts`
 - [x] Strategy scenario/progress API
 - [x] Responsive trainer UI in the web app
-- [ ] Trainer chart/reference polish
+- [x] Trainer chart/reference polish
 - [ ] Streak + accuracy tracking
 - [ ] Mistakes queue
 
@@ -92,3 +93,4 @@
 - [x] Chunk 1 complete: `/` serves, auth shell works, and auth endpoints were validated live — 2026-05-14
 - [x] Chunk 2 complete: session workspace flows validated against the live API — 2026-05-14
 - [x] Chunk 3 complete: trainer interaction flow validated against the live API — 2026-05-14
+- [x] Chunk 4 complete: responsive dashboard/trainer polish landed in the web app — 2026-05-14

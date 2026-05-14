@@ -63,8 +63,9 @@ Current status of `public/`:
 - auth shell is wired to the live API
 - dashboard shell hydrates from `/users/me`, `/users/me/stats`, `/sessions`, and `/strategy/progress`
 - sessions workspace now supports selection, create session, complete session, and hand logging against the live API
-- trainer workspace now supports auto-loading scenarios, attempt submission, live progress metrics, and next-hand flow against the live API
-- next major slice is responsive polish, dashboard refinement, and chart/reference fit-and-finish
+- trainer workspace now supports auto-loading scenarios, attempt submission, live progress metrics, next-hand flow, and a responsive reference sidebar
+- dashboard now includes active-session focus, quick actions, and improved desktop/tablet composition
+- next major slice is integration tests, docs refresh, and remaining polish
 
 ---
 
