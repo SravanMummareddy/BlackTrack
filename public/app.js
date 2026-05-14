@@ -872,18 +872,7 @@ async function onActionClick(event) {
   }
 
   if (action === "logout") {
-    clearTokens();
-    state.user = null;
-    state.stats = null;
-    state.sessions = [];
-    state.selectedSessionId = null;
-    state.selectedSession = null;
-    state.sessionHands = [];
-    state.sessionStats = null;
-    state.trainerProgress = null;
-    state.trainerScenario = null;
-    state.trainerFeedback = null;
-    render();
+    await logoutUser();
     return;
   }
 
@@ -980,6 +969,31 @@ async function submitAuth(formData) {
   persistTokens(data);
   addNotice(state.authMode === "login" ? "Signed in successfully." : "Account created successfully.", "success");
   await hydrateApp();
+}
+
+async function logoutUser() {
+  try {
+    if (state.tokens?.accessToken) {
+      await api("/auth/logout", { method: "POST" });
+    }
+  } catch {
+    // Logout is currently stateless on the server; local token cleanup still matters.
+  }
+
+  clearTokens();
+  state.user = null;
+  state.stats = null;
+  state.sessions = [];
+  state.selectedSessionId = null;
+  state.selectedSession = null;
+  state.sessionHands = [];
+  state.sessionStats = null;
+  state.trainerProgress = null;
+  state.trainerScenario = null;
+  state.trainerFeedback = null;
+  state.currentView = "dashboard";
+  addNotice("Signed out.", "success");
+  render();
 }
 
 async function createSession(formData) {
@@ -1114,7 +1128,7 @@ function buildTrainerQuery() {
   return "";
 }
 
-async function api(path, init = {}, requireAuth = true) {
+async function api(path, init = {}, requireAuth = true, retryOnAuthFailure = true) {
   const headers = {
     "Content-Type": "application/json",
     ...(init.headers || {}),
@@ -1128,6 +1142,32 @@ async function api(path, init = {}, requireAuth = true) {
     ...init,
     headers,
   });
+
+  if (response.status === 401 && requireAuth && retryOnAuthFailure && state.tokens?.refreshToken) {
+    try {
+      const refreshed = await api("/auth/refresh", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken: state.tokens.refreshToken }),
+      }, false, false);
+
+      persistTokens(refreshed);
+      return api(path, init, requireAuth, false);
+    } catch {
+      clearTokens();
+      state.user = null;
+      state.stats = null;
+      state.sessions = [];
+      state.selectedSessionId = null;
+      state.selectedSession = null;
+      state.sessionHands = [];
+      state.sessionStats = null;
+      state.trainerProgress = null;
+      state.trainerScenario = null;
+      state.trainerFeedback = null;
+      render();
+      throw new Error("Your session expired. Please sign in again.");
+    }
+  }
 
   if (response.status === 204) {
     return null;

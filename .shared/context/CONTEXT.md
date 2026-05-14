@@ -27,12 +27,14 @@ Design exploration is complete and the backend is partially operational. Three p
 - [x] Prototype frontend restored after an unsuccessful API-coupled rewrite
 - [x] Responsive web app shell started in `public/index.html`, `public/styles.css`, and `public/app.js`
 - [x] Express now serves the web app shell from `/`
+- [x] Chunk 1 completed: `/` serves correctly and auth register/login/refresh/logout flows were validated against the live API
 
 ---
 
 ## In Progress
 
 - [ ] Responsive web app implementation in small vertical slices
+- [ ] Chunk 2 — sessions workspace (list/detail/create/complete/log hand)
 - [ ] API test coverage
 - [ ] Docs/API reference refresh
 
@@ -67,18 +69,17 @@ Design exploration is complete and the backend is partially operational. Three p
 Unit tests:       Not run
 Integration:      Not run
 Coverage:         Unknown
-Last run:         2026-05-14 — `bun run typecheck` passing after web shell + prototype restore
+Last run:         2026-05-14 — `bun run typecheck` passing; `/` verified by curl; auth flows verified by live API requests
 ```
 
 ---
 
 ## Next Steps for Incoming Agent
 
-1. Finish the responsive web app shell so `/` loads cleanly and all current routes work without JS/runtime issues
-2. Complete the first usable vertical slice: auth, dashboard stats, sessions list/detail, create session, complete session, hand logging
-3. Add strategy trainer interactivity and chart/progress flows in the web app
-4. Add integration tests for auth, session lifecycle, hands, user stats, and strategy endpoints
-5. Refresh `docs/API.md`, `README.md`, and product-facing docs once the web slice is usable
+1. Complete Chunk 2: sessions workspace with live session list, session detail, create session, complete session, and hand logging
+2. Complete Chunk 3: trainer interactivity, progress, and chart/reference flows in the web app
+3. Add integration tests for auth, session lifecycle, hands, user stats, and strategy endpoints
+4. Refresh `docs/API.md`, `README.md`, and product-facing docs once the first usable web slice is stable
 
 ---
 

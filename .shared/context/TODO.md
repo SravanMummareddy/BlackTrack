@@ -4,8 +4,8 @@
 
 ## High Priority
 
-- [ ] **Responsive web app shell** — Make `/` load a stable, working desktop/mobile web interface from `public/`
-- [ ] **Auth + dashboard slice** — Sign in/register, load `/users/me`, `/users/me/stats`, and render a working landing dashboard
+- [x] **Responsive web app shell** — Make `/` load a stable, working desktop/mobile web interface from `public/`
+- [x] **Auth + dashboard slice** — Sign in/register, load `/users/me`, `/users/me/stats`, and render a working landing dashboard
 - [ ] **Sessions workspace slice** — Create session, list sessions, session detail, complete session, and hand logging
 - [ ] **Trainer workspace slice** — Random scenario, attempt submission, progress panel, chart/reference view
 - [ ] **API tests** — Add integration coverage for auth, sessions, hands, user stats, and strategy endpoints
@@ -87,3 +87,4 @@
 - [x] Strategy service, API routes, and seed script implemented — 2026-05-14
 - [x] Prototype restored as visual/interaction reference after reverting API-coupled experiment — 2026-05-14
 - [x] Real web app scaffold started under `public/` and served by Express — 2026-05-14
+- [x] Chunk 1 complete: `/` serves, auth shell works, and auth endpoints were validated live — 2026-05-14

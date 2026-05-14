@@ -58,6 +58,12 @@ public/
 
 The production web app is intentionally separate from `design/`. `design/` is reference-only; `public/` is the real browser application being built.
 
+Current status of `public/`:
+- `/` is served by Express
+- auth shell is wired to the live API
+- dashboard shell hydrates from `/users/me`, `/users/me/stats`, `/sessions`, and `/strategy/progress`
+- next major slice is the sessions workspace UX
+
 ---
 
 ## Module Overview
