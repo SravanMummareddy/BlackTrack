@@ -31,6 +31,7 @@ Design exploration is complete and the backend is partially operational. Three p
 - [x] Chunk 2 completed: sessions workspace flow validated for session selection, create session, log hand, complete session, and session stats refresh
 - [x] Chunk 3 completed: trainer workspace now auto-loads a hand on entry, tracks real response time, surfaces progress metrics, and advances directly to the next hand
 - [x] Chunk 4 completed: dashboard and trainer layouts were refined for desktop/tablet, with quick actions, active-session focus, and a safer hand-log shortcut
+- [x] Docs slice completed: `README.md` and `docs/API.md` now reflect the real Blackjack tracker + trainer application
 
 ---
 
@@ -39,7 +40,7 @@ Design exploration is complete and the backend is partially operational. Three p
 - [ ] Responsive web app implementation in small vertical slices
 - [ ] Chunk 5 — tests, docs refresh, and remaining UI polish
 - [ ] API test coverage
-- [ ] Docs/API reference refresh
+- [ ] Template docs cleanup for architecture, database, deployment, runbook, and style guide
 
 ---
 
@@ -76,15 +77,16 @@ Last run:         2026-05-14 — `bun run typecheck` passing; `/` verified by cu
 Sessions run:     2026-05-14 — create session, log hand, complete session, list session, and fetch session stats verified by live API requests
 Trainer run:      2026-05-14 — random scenario, attempt submission, and progress metrics verified by live API requests
 UI polish run:    2026-05-14 — responsive dashboard/trainer layout refinements applied; client syntax verified
+Docs run:         2026-05-14 — `README.md` and `docs/API.md` refreshed to match the live backend and web app
 ```
 
 ---
 
 ## Next Steps for Incoming Agent
 
-1. Complete Chunk 5: add integration tests, refresh docs, and close the remaining UI polish gaps
+1. Complete Chunk 5: add integration tests and clean up the remaining template-heavy docs
 2. Add integration tests for auth, session lifecycle, hands, user stats, and strategy endpoints
-3. Refresh `docs/API.md`, `README.md`, and product-facing docs now that the first usable web slice is stable
+3. Refresh `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/DEPLOYMENT.md`, and `docs/RUNBOOK.md` so they stop describing placeholder infrastructure
 4. Continue shipping in small vertical slices with git checkpoints after each usable milestone
 
 ---
@@ -99,3 +101,4 @@ UI polish run:    2026-05-14 — responsive dashboard/trainer layout refinements
 - Work should be delivered in smaller chunks with regular git checkpoints and markdown updates.
 - Trainer progress now uses real measured response time from scenario load until answer submission.
 - Dashboard shortcuts now explicitly load the active session before opening the hand logger to avoid logging against stale selection state.
+- `README.md` and `docs/API.md` are current; the other docs still contain placeholder references to Redis, generic posts data, or example deployments.

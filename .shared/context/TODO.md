@@ -11,8 +11,9 @@
 - [x] **Responsive polish slice** — Improve desktop/tablet layout, dashboard hierarchy, and trainer/session fit-and-finish
 - [ ] **API tests** — Add integration coverage for auth, sessions, hands, user stats, and strategy endpoints
 - [ ] **Strategy content verification** — Confirm seeded scenarios and evaluator outputs against a reference basic-strategy chart
-- [ ] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
-- [ ] **Docs + verification slice** — Refresh README/API docs and add a stronger manual smoke-test pass
+- [x] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
+- [ ] **Docs template cleanup** — Rewrite architecture, database, deployment, runbook, and style-guide docs around the real app
+- [ ] **Docs + verification slice** — Add a stronger manual smoke-test pass and document it
 
 ## Medium Priority
 
@@ -94,3 +95,4 @@
 - [x] Chunk 2 complete: session workspace flows validated against the live API — 2026-05-14
 - [x] Chunk 3 complete: trainer interaction flow validated against the live API — 2026-05-14
 - [x] Chunk 4 complete: responsive dashboard/trainer polish landed in the web app — 2026-05-14
+- [x] Docs slice complete: README and API reference refreshed for the live product — 2026-05-14

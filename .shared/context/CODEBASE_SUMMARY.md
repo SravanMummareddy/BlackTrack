@@ -65,7 +65,8 @@ Current status of `public/`:
 - sessions workspace now supports selection, create session, complete session, and hand logging against the live API
 - trainer workspace now supports auto-loading scenarios, attempt submission, live progress metrics, next-hand flow, and a responsive reference sidebar
 - dashboard now includes active-session focus, quick actions, and improved desktop/tablet composition
-- next major slice is integration tests, docs refresh, and remaining polish
+- `README.md` and `docs/API.md` now describe the real app; several deeper docs still need template cleanup
+- next major slice is integration tests, remaining docs cleanup, and final polish
 
 ---
 

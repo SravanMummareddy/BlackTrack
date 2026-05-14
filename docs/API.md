@@ -1,183 +1,486 @@
-# API Documentation — [PROJECT_NAME]
+# API Documentation — BlackStack
 
----
+Base URL:
 
-## Base URL
-
-| Environment | URL |
-|---|---|
-| Local | `http://localhost:3000/api/v1` |
-| Staging | `https://staging.example.com/api/v1` |
-| Production | `https://api.example.com/api/v1` |
-
----
-
-## Authentication
-
-All endpoints except those marked **Public** require a JWT bearer token.
-
+```text
+http://localhost:3000/api/v1
 ```
+
+All authenticated endpoints require:
+
+```text
 Authorization: Bearer <access_token>
 ```
 
-Tokens are obtained via `POST /auth/login` or `POST /auth/register`.
-Access tokens expire after 15 minutes. Use `POST /auth/refresh` to get a new one.
+## Response Shapes
 
----
+Success object:
 
-## Request/Response Format
-
-All requests and responses use `Content-Type: application/json`.
-
-### Success Response
 ```json
-{ "data": { ... } }
+{ "data": { } }
 ```
 
-### Paginated Response
+Paginated list:
+
 ```json
 {
-  "data": [ ... ],
+  "data": [],
   "pagination": {
     "page": 1,
     "pageSize": 20,
-    "total": 42,
-    "totalPages": 3,
-    "hasNext": true,
-    "hasPrev": false
+    "total": 0,
+    "totalPages": 0
   }
 }
 ```
 
-### Error Response
+Error:
+
 ```json
 {
   "error": {
-    "code": "NOT_FOUND",
-    "message": "User not found",
-    "details": []
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": [
+      { "field": "email", "message": "Invalid email" }
+    ]
   }
 }
 ```
 
----
+## Health
 
-## Error Codes
+### `GET /health`
 
-| Code | HTTP Status | Description |
-|---|---|---|
-| `VALIDATION_ERROR` | 400 | Request body/params failed validation |
-| `UNAUTHORIZED` | 401 | Missing or invalid authentication token |
-| `FORBIDDEN` | 403 | Authenticated but not authorized for this action |
-| `NOT_FOUND` | 404 | Resource does not exist |
-| `CONFLICT` | 409 | Duplicate resource (e.g., email already registered) |
-| `RATE_LIMIT_EXCEEDED` | 429 | Too many requests |
-| `INTERNAL_ERROR` | 500 | Unexpected server error |
+Checks API and database health.
 
----
+Example response:
 
-## Rate Limiting
-
-| Endpoint Group | Limit |
-|---|---|
-| All authenticated routes | 1000 req/min per user |
-| `POST /auth/login` | 5 req/15 min per IP |
-| `POST /auth/register` | 10 req/hour per IP |
-| All unauthenticated routes | 100 req/min per IP |
-
-Rate limit headers included on every response:
-- `X-RateLimit-Limit`
-- `X-RateLimit-Remaining`
-- `X-RateLimit-Reset` (Unix timestamp)
-
----
-
-## Endpoints
-
-### System
-
-#### `GET /health` — Public
-Returns service health status.
-
-**Response 200**:
 ```json
 {
   "status": "ok",
-  "timestamp": "2024-01-15T10:30:00.000Z",
+  "timestamp": "2026-05-14T20:00:00.000Z",
+  "version": "1.0.0",
   "checks": {
-    "database": { "status": "ok", "latencyMs": 12 },
-    "redis": { "status": "ok", "latencyMs": 3 }
+    "database": { "status": "ok" }
   }
 }
 ```
 
----
+### `GET /health/live`
 
-### Auth
+Simple liveness probe.
 
-#### `POST /auth/register` — Public
-Create a new user account.
+Example response:
 
-**Request**:
 ```json
-{ "email": "alice@example.com", "password": "SecurePass1!", "name": "Alice" }
+{ "status": "ok" }
 ```
 
-**Response 201**:
+## Auth
+
+### `POST /auth/register`
+
+Creates a user and returns stateless JWT tokens.
+
+Request:
+
+```json
+{
+  "email": "player@example.com",
+  "name": "Blackjack Player",
+  "password": "StrongPass123!"
+}
+```
+
+Response `201`:
+
 ```json
 {
   "data": {
-    "accessToken": "eyJ...",
-    "user": { "id": "uuid", "email": "alice@example.com", "name": "Alice" }
+    "accessToken": "jwt-access-token",
+    "refreshToken": "jwt-refresh-token"
   }
 }
 ```
 
----
+### `POST /auth/login`
 
-#### `POST /auth/login` — Public
-Authenticate with email and password.
+Request:
 
-**Request**:
 ```json
-{ "email": "alice@example.com", "password": "SecurePass1!" }
+{
+  "email": "player@example.com",
+  "password": "StrongPass123!"
+}
 ```
 
-**Response 200**: same as register.
-**Response 401**: Invalid credentials.
+Response `200`:
 
----
-
-#### `POST /auth/refresh` — Public (requires valid refresh token in cookie or body)
-Exchange a refresh token for a new access token.
-
-**Response 200**:
 ```json
-{ "data": { "accessToken": "eyJ..." } }
+{
+  "data": {
+    "accessToken": "jwt-access-token",
+    "refreshToken": "jwt-refresh-token"
+  }
+}
 ```
 
----
+### `POST /auth/refresh`
 
-### Users
+Request:
 
-#### `GET /users` — Requires Auth, Admin only
-List all users with pagination.
-
-**Query params**: `page`, `pageSize` (default: 1, 20)
-
-#### `GET /users/me` — Requires Auth
-Get the current authenticated user's profile.
-
-#### `GET /users/:id` — Requires Auth
-Get a user by ID.
-
-#### `PUT /users/:id` — Requires Auth (own profile or Admin)
-Update user profile.
-
-**Request**:
 ```json
-{ "name": "Alice Smith" }
+{
+  "refreshToken": "jwt-refresh-token"
+}
 ```
 
-#### `DELETE /users/:id` — Requires Auth, Admin only
-Soft-delete a user.
+Response `200`:
+
+```json
+{
+  "data": {
+    "accessToken": "jwt-access-token",
+    "refreshToken": "jwt-refresh-token"
+  }
+}
+```
+
+### `POST /auth/logout`
+
+Requires auth. Current implementation is a no-op because tokens are stateless.
+
+Response `204` with no body.
+
+## Users
+
+### `GET /users/me`
+
+Response `200`:
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "email": "player@example.com",
+    "name": "Blackjack Player",
+    "role": "USER",
+    "createdAt": "2026-05-14T20:00:00.000Z"
+  }
+}
+```
+
+### `PATCH /users/me`
+
+Request:
+
+```json
+{
+  "name": "Updated Name",
+  "email": "updated@example.com"
+}
+```
+
+Response `200`: same shape as `GET /users/me`.
+
+### `GET /users/me/stats`
+
+Returns account-level bankroll and hand summary values.
+
+Response `200`:
+
+```json
+{
+  "data": {
+    "sessionsPlayed": 4,
+    "completedSessions": 3,
+    "activeSessions": 1,
+    "totalBuyIn": 120000,
+    "completedBuyIn": 90000,
+    "totalCashOut": 101500,
+    "netProfit": 11500,
+    "roi": 0.1278,
+    "handsPlayed": 61,
+    "handsWon": 29,
+    "winRate": 0.4754,
+    "totalBet": 18400,
+    "totalPayout": 3200,
+    "averageBet": 302
+  }
+}
+```
+
+## Sessions
+
+Money fields are integer cents.
+
+### `POST /sessions`
+
+Request:
+
+```json
+{
+  "casinoName": "Bellagio",
+  "tableMin": 2500,
+  "tableMax": 20000,
+  "decks": 6,
+  "buyIn": 30000,
+  "notes": "Crowded pit, staying disciplined."
+}
+```
+
+Response `201`:
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "userId": "uuid",
+    "casinoName": "Bellagio",
+    "tableMin": 2500,
+    "tableMax": 20000,
+    "decks": 6,
+    "startedAt": "2026-05-14T20:00:00.000Z",
+    "endedAt": null,
+    "status": "ACTIVE",
+    "buyIn": 30000,
+    "cashOut": null,
+    "notes": "Crowded pit, staying disciplined.",
+    "createdAt": "2026-05-14T20:00:00.000Z",
+    "updatedAt": "2026-05-14T20:00:00.000Z",
+    "handsPlayed": 0,
+    "handsWon": 0
+  }
+}
+```
+
+### `GET /sessions?page=1&pageSize=20`
+
+Response `200`:
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "casinoName": "Bellagio",
+      "status": "ACTIVE",
+      "buyIn": 30000,
+      "cashOut": null,
+      "handsPlayed": 3,
+      "handsWon": 1,
+      "netProfit": null
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+### `GET /sessions/:id`
+
+Returns the full session record.
+
+### `PATCH /sessions/:id`
+
+Request fields are all optional:
+
+```json
+{
+  "notes": "Left when game quality dipped.",
+  "cashOut": 36200,
+  "status": "COMPLETED"
+}
+```
+
+When `status` becomes `COMPLETED`, `endedAt` is set if it was empty.
+
+### `DELETE /sessions/:id`
+
+Deletes the session and its hands.
+
+Response `204` with no body.
+
+## Hands
+
+Nested under a session:
+
+```text
+/sessions/:sessionId/hands
+```
+
+### `POST /sessions/:sessionId/hands`
+
+Request:
+
+```json
+{
+  "bet": 2500,
+  "result": "WIN",
+  "playerCards": ["A", "8"],
+  "dealerCards": ["6", "10"],
+  "playerTotal": 19,
+  "dealerTotal": 16,
+  "splitHand": false,
+  "doubled": false,
+  "surrendered": false,
+  "payout": 2500
+}
+```
+
+Response `201`:
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "sessionId": "uuid",
+    "handNumber": 1,
+    "bet": 2500,
+    "result": "WIN",
+    "playerCards": ["A", "8"],
+    "dealerCards": ["6", "10"],
+    "playerTotal": 19,
+    "dealerTotal": 16,
+    "splitHand": false,
+    "doubled": false,
+    "surrendered": false,
+    "payout": 2500,
+    "playedAt": "2026-05-14T20:00:00.000Z"
+  }
+}
+```
+
+### `GET /sessions/:sessionId/hands?page=1&pageSize=20`
+
+Returns a paginated list of hands ordered by `handNumber`.
+
+### `GET /sessions/:sessionId/hands/stats`
+
+Response `200`:
+
+```json
+{
+  "data": {
+    "handsPlayed": 12,
+    "handsWon": 6,
+    "winRate": 0.5,
+    "netProfit": 4800,
+    "roi": 0.16,
+    "totalBet": 29000,
+    "avgBet": 2416.67,
+    "biggestWin": {
+      "id": "uuid",
+      "payout": 5000
+    },
+    "biggestLoss": {
+      "id": "uuid",
+      "payout": -5000
+    }
+  }
+}
+```
+
+`netProfit` and `roi` are based on session completion state, so they can be `null` for active sessions.
+
+## Strategy
+
+### `GET /strategy/scenarios/random`
+
+Optional query params:
+- `difficulty=1|2|3`
+- `isSoft=true|false`
+- `isPair=true|false`
+
+Response `200`:
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "playerCards": ["A", "7"],
+    "dealerUpcard": "6",
+    "playerTotal": 18,
+    "isSoft": true,
+    "isPair": false,
+    "correctAction": "DOUBLE",
+    "difficulty": 2,
+    "createdAt": "2026-05-14T20:00:00.000Z"
+  }
+}
+```
+
+### `POST /strategy/attempts`
+
+Request:
+
+```json
+{
+  "scenarioId": "uuid",
+  "action": "DOUBLE",
+  "timeMs": 1350
+}
+```
+
+Response `201`:
+
+```json
+{
+  "data": {
+    "attempt": {
+      "id": "uuid",
+      "userId": "uuid",
+      "scenarioId": "uuid",
+      "action": "DOUBLE",
+      "correct": true,
+      "timeMs": 1350,
+      "attemptedAt": "2026-05-14T20:00:00.000Z"
+    },
+    "evaluation": {
+      "action": "DOUBLE",
+      "correct": true,
+      "correctAction": "DOUBLE",
+      "reasoning": "This is a profitable double spot: your soft 18 has enough equity to press the advantage.",
+      "ruleOfThumb": "Soft 13-18 often doubles against weak dealer upcards."
+    }
+  }
+}
+```
+
+### `GET /strategy/progress`
+
+Response `200`:
+
+```json
+{
+  "data": {
+    "attempts": 18,
+    "correct": 13,
+    "accuracy": 0.7222,
+    "averageResponseTimeMs": 1420,
+    "lastAttemptAt": "2026-05-14T20:00:00.000Z"
+  }
+}
+```
+
+## Error Codes
+
+- `VALIDATION_ERROR`
+- `UNAUTHORIZED`
+- `FORBIDDEN`
+- `NOT_FOUND`
+- `CONFLICT`
+- `UNPROCESSABLE`
+- `RATE_LIMIT_EXCEEDED`
+
+## Notes
+
+- Money is stored as integer cents across all session and hand endpoints.
+- Refresh and access tokens are both returned in JSON today.
+- `POST /auth/logout` currently returns `204` and does not blacklist tokens yet.
+- `design/` is not part of the API surface; the real browser app is served from `/`.
