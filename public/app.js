@@ -92,26 +92,8 @@ async function hydrateApp() {
   render();
 
   try {
-    const [user, stats, sessions, trainerProgress] = await Promise.all([
-      api("/users/me"),
-      loadUserStats(state.statsPeriod, false),
-      api("/sessions"),
-      api("/strategy/progress"),
-    ]);
-
+    const user = await api("/users/me");
     state.user = user;
-    state.stats = stats;
-    state.sessions = sessions.data;
-    state.trainerProgress = trainerProgress;
-    state.selectedSessionId = state.sessions[0]?.id ?? null;
-
-    if (state.selectedSessionId) {
-      await loadSessionDetails(state.selectedSessionId);
-    } else {
-      state.selectedSession = null;
-      state.sessionHands = [];
-      state.sessionStats = null;
-    }
   } catch (error) {
     clearTokens();
     state.user = null;
@@ -122,11 +104,42 @@ async function hydrateApp() {
     state.sessionHands = [];
     state.sessionStats = null;
     state.trainerProgress = null;
-    addNotice(error.message || "Could not load your app data.", "error");
-  } finally {
+    addNotice(error.message || "Could not load your profile.", "error");
     state.loading.app = false;
     render();
+    return;
   }
+
+  await Promise.all([
+    loadUserStats(state.statsPeriod, false).catch(() => {
+      state.stats = null;
+    }),
+    api("/sessions").then((sessions) => {
+      state.sessions = sessions.data;
+      state.selectedSessionId = state.sessions[0]?.id ?? null;
+      if (state.selectedSessionId) {
+        return loadSessionDetails(state.selectedSessionId);
+      } else {
+        state.selectedSession = null;
+        state.sessionHands = [];
+        state.sessionStats = null;
+      }
+    }).catch(() => {
+      state.sessions = [];
+      state.selectedSessionId = null;
+      state.selectedSession = null;
+      state.sessionHands = [];
+      state.sessionStats = null;
+    }),
+    api("/strategy/progress").then((progress) => {
+      state.trainerProgress = progress;
+    }).catch(() => {
+      state.trainerProgress = null;
+    }),
+  ]);
+
+  state.loading.app = false;
+  render();
 }
 
 async function loadSessionDetails(sessionId) {
@@ -594,8 +607,9 @@ function renderTrainerView() {
 
 function renderScenarioBoard() {
   const scenario = state.trainerScenario;
+  const firstCard = scenario?.playerCards?.[0];
   const handLabel = scenario.isPair
-    ? `Pair of ${scenario.playerCards[0]}s`
+    ? (firstCard ? `Pair of ${firstCard}s` : "Pair hand")
     : scenario.isSoft
       ? `Soft ${scenario.playerTotal}`
       : `Hard ${scenario.playerTotal}`;
@@ -1528,7 +1542,9 @@ function describeStatsWindow() {
 }
 
 function getScenarioLabel(scenario) {
-  if (scenario.isPair) return `Pair of ${scenario.playerCards[0]}s`;
+  if (!scenario) return "Review hand";
+  const firstCard = scenario.playerCards?.[0];
+  if (scenario.isPair) return firstCard ? `Pair of ${firstCard}s` : "Pair hand";
   if (scenario.isSoft) return `Soft ${scenario.playerTotal}`;
   return `Hard ${scenario.playerTotal}`;
 }
