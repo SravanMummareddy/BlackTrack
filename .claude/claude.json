@@ -1,0 +1,45 @@
+{
+  "instructions": ".shared/CANONICAL_INSTRUCTIONS.md",
+  "context": {
+    "rootDir": ".",
+    "excludePatterns": [
+      "node_modules/**",
+      ".next/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      "*.log",
+      ".git/**"
+    ],
+    "priorityFiles": [
+      ".shared/context/CONTEXT.md",
+      ".shared/context/TODO.md",
+      ".shared/context/DECISIONS.md",
+      ".shared/CANONICAL_INSTRUCTIONS.md"
+    ]
+  },
+  "skills": {
+    "path": ".shared/skills/",
+    "autoLoad": false,
+    "available": [
+      ".shared/skills/data-patterns/pagination.md",
+      ".shared/skills/data-patterns/caching.md",
+      ".shared/skills/data-patterns/rate-limiting.md",
+      ".shared/skills/api-patterns/error-handling.md",
+      ".shared/skills/api-patterns/validation.md",
+      ".shared/skills/api-patterns/authentication.md",
+      ".shared/skills/database-patterns/connection-pooling.md",
+      ".shared/skills/database-patterns/transaction-safety.md",
+      ".shared/skills/database-patterns/query-optimization.md",
+      ".shared/skills/testing-patterns/unit-test-template.md",
+      ".shared/skills/testing-patterns/integration-test-template.md",
+      ".shared/skills/testing-patterns/mock-data-strategy.md",
+      ".shared/skills/deployment/docker-best-practices.md",
+      ".shared/skills/deployment/env-var-strategy.md",
+      ".shared/skills/deployment/health-checks.md"
+    ]
+  },
+  "mcpServers": {
+    "_comment": "Uncomment and configure servers from .shared/mcp/servers.json as needed"
+  }
+}

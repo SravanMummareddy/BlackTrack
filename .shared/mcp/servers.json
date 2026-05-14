@@ -1,0 +1,31 @@
+{
+  "_comment": "MCP server definitions. Copy relevant sections into .claude/claude.json > mcpServers.",
+  "servers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/[USERNAME]/Documents/[PROJECT_DIR]"
+      ],
+      "_comment": "Replace [USERNAME] and [PROJECT_DIR] with your actual paths. Scopes FS access to this directory only."
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "[YOUR_GITHUB_PAT]"
+      },
+      "_comment": "Create a PAT at github.com/settings/tokens with repo scope. Gives agents access to read PRs and issues."
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:[PASSWORD]@localhost:5432/[DATABASE]"
+      ],
+      "_comment": "Read-only database access for debugging. Use a read-only DB user in non-dev environments."
+    }
+  }
+}

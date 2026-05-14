@@ -1,0 +1,57 @@
+# OpenCode Configuration
+# Project: [PROJECT_NAME]
+
+project:
+  name: "[PROJECT_NAME]"
+  description: "[PROJECT_DESCRIPTION]"
+  version: "1.0.0"
+
+# Source of truth for coding instructions
+instructions:
+  primary: ".shared/CANONICAL_INSTRUCTIONS.md"
+  agentSpecific: ".opencode/instructions.md"
+
+# Skill library paths
+skills:
+  root: ".shared/skills/"
+  categories:
+    - "data-patterns"
+    - "api-patterns"
+    - "database-patterns"
+    - "testing-patterns"
+    - "deployment"
+
+# Context files (read at session start)
+context:
+  files:
+    - ".shared/context/CONTEXT.md"
+    - ".shared/context/TODO.md"
+    - ".shared/context/DECISIONS.md"
+    - ".shared/context/CODEBASE_SUMMARY.md"
+
+# Documentation paths
+docs:
+  architecture: "docs/ARCHITECTURE.md"
+  styleGuide: "docs/STYLE_GUIDE.md"
+  api: "docs/API.md"
+  database: "docs/DATABASE.md"
+  deployment: "docs/DEPLOYMENT.md"
+  runbook: "docs/RUNBOOK.md"
+
+# Schema paths
+schemas:
+  database: ".shared/schemas/database-schema.sql"
+  api: ".shared/schemas/api-schema.json"
+
+# MCP note
+mcp:
+  note: "OpenCode does not natively support MCP. Use wrapper APIs or direct tool calls for external integrations."
+
+# Excluded from context loading
+exclude:
+  - "node_modules/**"
+  - ".next/**"
+  - "dist/**"
+  - "build/**"
+  - "coverage/**"
+  - "*.log"

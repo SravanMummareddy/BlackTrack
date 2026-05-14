@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum HandResult {
+  WIN
+  LOSS
+  PUSH
+  BLACKJACK
+  SURRENDER
+}
+
+enum StrategyAction {
+  HIT
+  STAND
+  DOUBLE
+  SPLIT
+  SURRENDER
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  passwordHash  String?
+  oauthProvider String?
+  oauthId       String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions         CasinoSession[]
+  strategyAttempts StrategyAttempt[]
+
+  @@index([email])
+  @@index([oauthProvider, oauthId])
+}
+
+model CasinoSession {
+  id         String        @id @default(uuid())
+  userId     String
+  casinoName String
+  tableMin   Int           // minimum bet in cents
+  tableMax   Int           // maximum bet in cents
+  decks      Int           @default(6)
+  startedAt  DateTime      @default(now())
+  endedAt    DateTime?
+  status     SessionStatus @default(ACTIVE)
+  buyIn      Int           // amount brought to table in cents
+  cashOut    Int?          // final chip count in cents
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hands Hand[]
+
+  // computed helpers stored for query efficiency
+  handsPlayed Int @default(0)
+  handsWon    Int @default(0)
+
+  @@index([userId])
+  @@index([startedAt])
+}
+
+model Hand {
+  id           String     @id @default(uuid())
+  sessionId    String
+  handNumber   Int        // sequential within session
+  bet          Int        // bet amount in cents
+  result       HandResult
+  playerCards  String[]   // e.g. ["A", "K"]
+  dealerCards  String[]   // e.g. ["7", "10"]
+  playerTotal  Int
+  dealerTotal  Int
+  splitHand    Boolean    @default(false)
+  doubled      Boolean    @default(false)
+  surrendered  Boolean    @default(false)
+  payout       Int        // net payout in cents (negative = loss)
+  playedAt     DateTime   @default(now())
+
+  session CasinoSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([playedAt])
+}
+
+// Basic strategy quiz/training
+model StrategyScenario {
+  id            String         @id @default(uuid())
+  playerCards   String[]       // cards dealt to player
+  dealerUpcard  String         // dealer's visible card
+  playerTotal   Int
+  isSoft        Boolean        // soft hand (contains ace counted as 11)
+  isPair        Boolean        // pair scenario
+  correctAction StrategyAction
+  difficulty    Int            @default(1) // 1=easy, 2=medium, 3=hard
+  createdAt     DateTime       @default(now())
+
+  attempts StrategyAttempt[]
+
+  @@unique([playerCards, dealerUpcard, isSoft, isPair])
+}
+
+model StrategyAttempt {
+  id          String         @id @default(uuid())
+  userId      String
+  scenarioId  String
+  action      StrategyAction
+  correct     Boolean
+  timeMs      Int?           // response time in milliseconds
+  attemptedAt DateTime       @default(now())
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenario StrategyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([scenarioId])
+  @@index([attemptedAt])
+}
