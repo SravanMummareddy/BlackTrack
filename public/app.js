@@ -304,8 +304,8 @@ function renderAuthenticatedApp() {
           <span class="eyebrow">Quick Actions</span>
           <div class="toolbar">
             <button class="primary-btn" data-action="open-modal" data-modal="session-create">New session</button>
-            <button class="ghost-btn" data-action="open-modal" data-modal="hand-log" ${state.selectedSession ? "" : "disabled"}>Log hand</button>
-            <button class="ghost-btn" data-action="open-modal" data-modal="session-complete" ${state.selectedSession ? "" : "disabled"}>Complete session</button>
+            <button class="ghost-btn" data-action="open-modal" data-modal="hand-log" ${state.selectedSession?.status === "ACTIVE" ? "" : "disabled"}>Log hand</button>
+            <button class="ghost-btn" data-action="open-modal" data-modal="session-complete" ${state.selectedSession?.status === "ACTIVE" ? "" : "disabled"}>Complete session</button>
           </div>
         </section>
       </aside>
@@ -1351,21 +1351,26 @@ async function loadTrainerScenarioById(scenarioId) {
 
 async function submitTrainerAttempt(action) {
   if (!state.trainerScenario) {
-    throw new Error("Deal a scenario first.");
+    addNotice("Deal a scenario first.", "error");
+    return;
   }
 
-  const response = await api("/strategy/attempts", {
-    method: "POST",
-    body: JSON.stringify({
-      scenarioId: state.trainerScenario.id,
-      action,
-      timeMs: state.trainerStartedAt ? Math.max(250, Date.now() - state.trainerStartedAt) : 1000,
-    }),
-  });
+  try {
+    const response = await api("/strategy/attempts", {
+      method: "POST",
+      body: JSON.stringify({
+        scenarioId: state.trainerScenario.id,
+        action,
+        timeMs: state.trainerStartedAt ? Math.max(250, Date.now() - state.trainerStartedAt) : 1000,
+      }),
+    });
 
-  state.trainerFeedback = response.evaluation;
-  state.trainerProgress = await api("/strategy/progress");
-  render();
+    state.trainerFeedback = response.evaluation;
+    state.trainerProgress = await api("/strategy/progress");
+    render();
+  } catch (error) {
+    addNotice(error.message || "Could not submit attempt.", "error");
+  }
 }
 
 function openModal(name) {
