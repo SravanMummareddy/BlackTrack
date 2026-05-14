@@ -188,25 +188,55 @@ Response `200`: same shape as `GET /users/me`.
 
 Returns account-level bankroll and hand summary values.
 
+Optional query param:
+
+```text
+period=all|year|month|week
+```
+
+If omitted, `all` is used.
+
 Response `200`:
 
 ```json
 {
   "data": {
+    "period": "month",
+    "windowStart": "2026-04-14T20:00:00.000Z",
     "sessionsPlayed": 4,
     "completedSessions": 3,
     "activeSessions": 1,
+    "sessionsWon": 2,
+    "sessionsLost": 1,
+    "completedSessionWinRate": 0.6667,
     "totalBuyIn": 120000,
     "completedBuyIn": 90000,
     "totalCashOut": 101500,
     "netProfit": 11500,
     "roi": 0.1278,
+    "averageSessionNet": 3833,
     "handsPlayed": 61,
     "handsWon": 29,
     "winRate": 0.4754,
     "totalBet": 18400,
     "totalPayout": 3200,
-    "averageBet": 302
+    "averageBet": 302,
+    "topCasinos": [
+      {
+        "casinoName": "Bellagio",
+        "sessionsPlayed": 2,
+        "completedSessions": 2,
+        "activeSessions": 0,
+        "totalBuyIn": 60000,
+        "totalCashOut": 68200,
+        "netProfit": 8200,
+        "handsPlayed": 24,
+        "handsWon": 12,
+        "averageSessionNet": 4100,
+        "winRate": 0.5,
+        "roi": 0.1367
+      }
+    ]
   }
 }
 ```

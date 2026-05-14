@@ -6,6 +6,7 @@ const state = {
   tokens: loadTokens(),
   user: null,
   stats: null,
+  statsPeriod: "all",
   sessions: [],
   selectedSessionId: null,
   selectedSession: null,
@@ -19,6 +20,7 @@ const state = {
   currentView: "dashboard",
   loading: {
     app: true,
+    stats: false,
     session: false,
     trainer: false,
   },
@@ -92,7 +94,7 @@ async function hydrateApp() {
   try {
     const [user, stats, sessions, trainerProgress] = await Promise.all([
       api("/users/me"),
-      api("/users/me/stats"),
+      loadUserStats(state.statsPeriod, false),
       api("/sessions"),
       api("/strategy/progress"),
     ]);
@@ -319,16 +321,17 @@ function renderDashboardView() {
           <p>High-signal bankroll numbers, current play activity, and a fast path back into logging or training.</p>
         </div>
         <div class="period-tabs">
-          <button class="tab-btn active">All time</button>
-          <button class="tab-btn" disabled>Month</button>
-          <button class="tab-btn" disabled>Week</button>
+          ${renderPeriodTab("all", "All time")}
+          ${renderPeriodTab("month", "Month")}
+          ${renderPeriodTab("week", "Week")}
+          ${renderPeriodTab("year", "Year")}
         </div>
       </div>
       <div class="stats-grid">
         ${renderStatCard("Sessions Played", formatCount(state.stats?.sessionsPlayed))}
         ${renderStatCard("Completed", formatCount(state.stats?.completedSessions))}
-        ${renderStatCard("Win Rate", formatPercent(state.stats?.winRate), toneClass((state.stats?.winRate ?? 0) * 100))}
-        ${renderStatCard("Total Payout", formatMoney(state.stats?.totalPayout), toneClass(state.stats?.totalPayout))}
+        ${renderStatCard("Session Win Rate", formatPercent(state.stats?.completedSessionWinRate), toneClass((state.stats?.completedSessionWinRate ?? 0) * 100))}
+        ${renderStatCard("Avg Session Net", formatMoney(state.stats?.averageSessionNet), toneClass(state.stats?.averageSessionNet))}
       </div>
     </section>
     <section class="dashboard-grid">
@@ -404,6 +407,37 @@ function renderDashboardView() {
         </div>
         <div class="session-list">
           ${state.sessions.length ? state.sessions.slice(0, 4).map(renderSessionRow).join("") : renderEmptyCard("No sessions yet", "Create your first session to start building a bankroll history.")}
+        </div>
+      </article>
+      <article class="session-card">
+        <div class="section-head">
+          <div>
+            <h2>Period Snapshot</h2>
+            <p>${describeStatsWindow()} with bankroll performance and hands efficiency in one place.</p>
+          </div>
+          ${state.loading.stats ? `<span class="pill">Refreshing</span>` : `<span class="pill gold">${formatPeriodLabel(state.stats?.period ?? state.statsPeriod)}</span>`}
+        </div>
+        <div class="trainer-stats-grid">
+          ${renderDetailStat("Hands Won", formatCount(state.stats?.handsWon))}
+          ${renderDetailStat("Win Rate", formatPercent(state.stats?.winRate), toneClass((state.stats?.winRate ?? 0) * 100))}
+          ${renderDetailStat("Total Payout", formatMoney(state.stats?.totalPayout), toneClass(state.stats?.totalPayout))}
+          ${renderDetailStat("Average Bet", formatMoney(state.stats?.averageBet))}
+        </div>
+        <p class="helper">
+          ${state.stats?.windowStart ? `Window started: ${formatDateTime(state.stats.windowStart)}` : "Showing your full recorded history so far."}
+        </p>
+      </article>
+    </section>
+    <section class="sessions-grid dashboard-lower-grid">
+      <article class="session-card">
+        <div class="section-head">
+          <div>
+            <h2>Casino Breakdown</h2>
+            <p>Your strongest and weakest rooms in the current window.</p>
+          </div>
+        </div>
+        <div class="session-list">
+          ${state.stats?.topCasinos?.length ? state.stats.topCasinos.map(renderCasinoBreakdownRow).join("") : renderEmptyCard("No completed sessions yet", "Finish a few sessions to see which casinos are driving your bankroll results.")}
         </div>
       </article>
       <article class="session-card">
@@ -705,6 +739,25 @@ function renderSessionRow(session) {
   `;
 }
 
+function renderCasinoBreakdownRow(casino) {
+  return `
+    <div class="session-row">
+      <div class="row-top">
+        <div>
+          <div class="session-title">${escapeHtml(casino.casinoName)}</div>
+          <div class="helper">${formatCount(casino.sessionsPlayed)} sessions · ${formatCount(casino.completedSessions)} completed · ${formatCount(casino.handsPlayed)} hands</div>
+        </div>
+        <strong class="${toneClass(casino.netProfit)}">${formatMoney(casino.netProfit)}</strong>
+      </div>
+      <div class="row-bottom">
+        <span>ROI ${formatPercent(casino.roi)}</span>
+        <span>Win rate ${formatPercent(casino.winRate)}</span>
+        <span>Avg net ${formatMoney(casino.averageSessionNet)}</span>
+      </div>
+    </div>
+  `;
+}
+
 function renderHandRow(hand) {
   return `
     <div class="hand-row">
@@ -747,6 +800,12 @@ function renderNavButton(view, title, subtitle) {
       <span>${title}</span>
       <small>${subtitle}</small>
     </button>
+  `;
+}
+
+function renderPeriodTab(period, label) {
+  return `
+    <button class="tab-btn ${state.statsPeriod === period ? "active" : ""}" data-action="set-stats-period" data-period="${period}" ${state.loading.stats ? "disabled" : ""}>${label}</button>
   `;
 }
 
@@ -939,6 +998,13 @@ async function onActionClick(event) {
     if (state.currentView === "trainer" && !state.trainerScenario && !state.loading.trainer) {
       await loadTrainerScenario();
     }
+    return;
+  }
+
+  if (action === "set-stats-period") {
+    const period = event.currentTarget.dataset.period;
+    if (!period || period === state.statsPeriod) return;
+    await loadUserStats(period);
     return;
   }
 
@@ -1154,9 +1220,30 @@ async function logHand(formData) {
   addNotice("Hand saved.", "success");
   state.currentView = "sessions";
   await loadSessionDetails(state.selectedSessionId);
-  const [stats] = await Promise.all([api("/users/me/stats")]);
+  const [stats] = await Promise.all([loadUserStats(state.statsPeriod, false)]);
   state.stats = stats;
   render();
+}
+
+async function loadUserStats(period = state.statsPeriod, shouldRender = true) {
+  state.loading.stats = true;
+  if (shouldRender) render();
+
+  try {
+    const query = period !== "all" ? `?period=${period}` : "";
+    const stats = await api(`/users/me/stats${query}`);
+    state.stats = stats;
+    state.statsPeriod = period;
+    return stats;
+  } catch (error) {
+    if (shouldRender) {
+      addNotice(error.message || "Could not refresh bankroll analytics.", "error");
+    }
+    throw error;
+  } finally {
+    state.loading.stats = false;
+    if (shouldRender) render();
+  }
 }
 
 async function updateProfile(formData) {
@@ -1370,6 +1457,17 @@ function formatDateTime(value) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function formatPeriodLabel(value) {
+  if (value === "week") return "Last 7 days";
+  if (value === "month") return "Last 30 days";
+  if (value === "year") return "Last 12 months";
+  return "All time";
+}
+
+function describeStatsWindow() {
+  return formatPeriodLabel(state.stats?.period ?? state.statsPeriod);
 }
 
 function escapeHtml(value) {

@@ -184,10 +184,25 @@ describe('API integration', () => {
       .set('Authorization', `Bearer ${accessToken}`);
 
     expect(userStatsResponse.status).toBe(200);
+    expect(userStatsResponse.body.data.period).toBe('all');
     expect(userStatsResponse.body.data.sessionsPlayed).toBeGreaterThanOrEqual(1);
     expect(userStatsResponse.body.data.completedSessions).toBeGreaterThanOrEqual(1);
+    expect(userStatsResponse.body.data.sessionsWon).toBeGreaterThanOrEqual(1);
     expect(userStatsResponse.body.data.handsPlayed).toBeGreaterThanOrEqual(1);
     expect(userStatsResponse.body.data.totalBuyIn).toBeGreaterThanOrEqual(30000);
+    expect(userStatsResponse.body.data.averageSessionNet).toBeGreaterThanOrEqual(2500);
+    expect(Array.isArray(userStatsResponse.body.data.topCasinos)).toBe(true);
+    expect(userStatsResponse.body.data.topCasinos[0].casinoName).toBe('Bellagio');
+    expect(userStatsResponse.body.data.topCasinos[0].netProfit).toBeGreaterThanOrEqual(2500);
+
+    const monthStatsResponse = await request(app)
+      .get('/api/v1/users/me/stats?period=month')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(monthStatsResponse.status).toBe(200);
+    expect(monthStatsResponse.body.data.period).toBe('month');
+    expect(monthStatsResponse.body.data.windowStart).toBeString();
+    expect(monthStatsResponse.body.data.sessionsPlayed).toBeGreaterThanOrEqual(1);
   });
 
   test('strategy flow works end to end', async () => {

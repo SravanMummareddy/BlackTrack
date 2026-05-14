@@ -34,13 +34,14 @@ Design exploration is complete and the backend is partially operational. Three p
 - [x] Docs slice completed: `README.md` and `docs/API.md` now reflect the real Blackjack tracker + trainer application
 - [x] Integration test slice completed: auth, sessions, hands, user stats, and strategy flows now have a real API integration test
 - [x] Docs cleanup slice completed: architecture, database, deployment, runbook, and style guide docs now reflect the current app instead of templates
+- [x] Analytics slice completed: `/users/me/stats` now supports period filtering and casino breakdowns, and the dashboard consumes those live analytics
 
 ---
 
 ## In Progress
 
 - [ ] Responsive web app implementation in small vertical slices
-- [ ] Chunk 5 — final product polish and remaining feature work
+- [ ] Chunk 6 — strategy progression, session metadata, or additional analytics polish
 
 ---
 
@@ -80,15 +81,16 @@ UI polish run:    2026-05-14 — responsive dashboard/trainer layout refinements
 Docs run:         2026-05-14 — `README.md` and `docs/API.md` refreshed to match the live backend and web app
 Test run:         2026-05-14 — integration suite passed with 4 tests / 48 assertions against local Postgres after applying migrations
 Docs cleanup:     2026-05-14 — architecture, database, deployment, runbook, and style guide docs rewritten around the real app
+Analytics run:    2026-05-14 — typecheck passed; integration suite passed with 58 assertions after adding period and casino analytics coverage
 ```
 
 ---
 
 ## Next Steps for Incoming Agent
 
-1. Complete Chunk 5: final product polish and the next real feature slice
+1. Complete Chunk 6: strategy progression, session metadata, or another product-depth slice
 2. Decide whether to split the single integration test into smaller focused files as coverage grows
-3. Add stronger analytics, streaks, or other user-facing features rather than more template cleanup
+3. Add streaks, mistakes queue, tags, mood tracking, or further dashboard depth based on product priority
 4. Continue shipping in small vertical slices with git checkpoints after each usable milestone
 
 ---
@@ -104,3 +106,4 @@ Docs cleanup:     2026-05-14 — architecture, database, deployment, runbook, an
 - Trainer progress now uses real measured response time from scenario load until answer submission.
 - Dashboard shortcuts now explicitly load the active session before opening the hand logger to avoid logging against stale selection state.
 - Core docs are now aligned to the real app; the biggest remaining gaps are product depth and polish rather than documentation drift.
+- `/users/me/stats` now supports `period=all|year|month|week` and returns `topCasinos`, session outcome summaries, and average session net.

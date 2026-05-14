@@ -10,6 +10,7 @@
 - [x] **Trainer workspace slice** — Random scenario, attempt submission, progress panel, chart/reference view
 - [x] **Responsive polish slice** — Improve desktop/tablet layout, dashboard hierarchy, and trainer/session fit-and-finish
 - [x] **API tests** — Add integration coverage for auth, sessions, hands, user stats, and strategy endpoints
+- [x] **Analytics aggregations** — Period-based stats and per-casino dashboard breakdowns
 - [ ] **Strategy content verification** — Confirm seeded scenarios and evaluator outputs against a reference basic-strategy chart
 - [x] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
 - [x] **Docs template cleanup** — Rewrite architecture, database, deployment, runbook, and style-guide docs around the real app
@@ -19,7 +20,6 @@
 
 - [ ] **Git checkpoints** — Commit after each completed vertical slice with clear messages
 - [ ] **MD handoff cadence** — Refresh `.shared/context/*.md` and key docs after each milestone
-- [ ] **Analytics aggregations** — Period-based (Week/Month/Year/All) P/L, W/L count, avg per session, and per-casino breakdowns
 - [ ] **Budget ring logic** — Monthly budget setting per user; `% used`, `days left`, `net P/L` computed server-side
 - [ ] **Mood × result data** — Store pre/post session mood; expose in analytics for scatter chart
 - [ ] **Tags system** — Predefined tags (disciplined, tilted, chasing, lucky) + free-form notes on sessions
@@ -61,10 +61,10 @@
 ### Phase 3 — Analytics
 - [x] Overall bankroll stats endpoint
 - [x] Dashboard shell + responsive overview UI in the web app
-- [ ] Period-based stats
+- [x] Period-based stats
 - [ ] Budget ring computation
 - [ ] Mood × result aggregation
-- [ ] Per-casino breakdown
+- [x] Per-casino breakdown
 
 ### Phase 4 — Learn Core
 - [x] Basic strategy engine ported to `src/services/strategy-service.ts`
@@ -98,3 +98,4 @@
 - [x] Docs slice complete: README and API reference refreshed for the live product — 2026-05-14
 - [x] Integration test slice complete: baseline API coverage added with Supertest + Bun — 2026-05-14
 - [x] Docs cleanup slice complete: template-heavy docs rewritten for the real app — 2026-05-14
+- [x] Analytics slice complete: period stats and casino breakdowns added to backend and dashboard — 2026-05-14
