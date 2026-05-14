@@ -11,6 +11,7 @@
 - [x] **Responsive polish slice** — Improve desktop/tablet layout, dashboard hierarchy, and trainer/session fit-and-finish
 - [x] **API tests** — Add integration coverage for auth, sessions, hands, user stats, and strategy endpoints
 - [x] **Analytics aggregations** — Period-based stats and per-casino dashboard breakdowns
+- [x] **Strategy progression features** — Streaks and review resurfacing
 - [ ] **Strategy content verification** — Confirm seeded scenarios and evaluator outputs against a reference basic-strategy chart
 - [x] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
 - [x] **Docs template cleanup** — Rewrite architecture, database, deployment, runbook, and style-guide docs around the real app
@@ -23,7 +24,6 @@
 - [ ] **Budget ring logic** — Monthly budget setting per user; `% used`, `days left`, `net P/L` computed server-side
 - [ ] **Mood × result data** — Store pre/post session mood; expose in analytics for scatter chart
 - [ ] **Tags system** — Predefined tags (disciplined, tilted, chasing, lucky) + free-form notes on sessions
-- [ ] **Strategy progression features** — Streaks, mistakes queue, and review resurfacing
 
 ## Low Priority
 
@@ -71,8 +71,8 @@
 - [x] Strategy scenario/progress API
 - [x] Responsive trainer UI in the web app
 - [x] Trainer chart/reference polish
-- [ ] Streak + accuracy tracking
-- [ ] Mistakes queue
+- [x] Streak + accuracy tracking
+- [x] Mistakes queue
 
 ### Phase 5 — Responsible Gambling
 - [ ] Budget settings
@@ -99,3 +99,4 @@
 - [x] Integration test slice complete: baseline API coverage added with Supertest + Bun — 2026-05-14
 - [x] Docs cleanup slice complete: template-heavy docs rewritten for the real app — 2026-05-14
 - [x] Analytics slice complete: period stats and casino breakdowns added to backend and dashboard — 2026-05-14
+- [x] Strategy progression slice complete: streaks and missed-hand review added to backend and trainer UI — 2026-05-14

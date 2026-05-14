@@ -50,6 +50,11 @@ router.get('/scenarios/random', async (req: Request, res: Response) => {
   res.status(200).json({ data: scenario });
 });
 
+router.get('/scenarios/:id', async (req: Request, res: Response) => {
+  const scenario = await strategyService.getScenarioById(req.params.id);
+  res.status(200).json({ data: scenario });
+});
+
 router.post('/attempts', async (req: Request, res: Response) => {
   const input = parseBody(attemptSchema, req.body);
   const result = await strategyService.submitAttempt(

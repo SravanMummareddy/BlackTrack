@@ -214,6 +214,26 @@ describe('API integration', () => {
     expect(scenarioResponse.body.data.id).toBeString();
     scenarioId = scenarioResponse.body.data.id;
 
+    const scenarioByIdResponse = await request(app)
+      .get(`/api/v1/strategy/scenarios/${scenarioId}`)
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(scenarioByIdResponse.status).toBe(200);
+    expect(scenarioByIdResponse.body.data.id).toBe(scenarioId);
+
+    const wrongAction = scenarioResponse.body.data.correctAction === 'HIT' ? 'STAND' : 'HIT';
+    const incorrectAttemptResponse = await request(app)
+      .post('/api/v1/strategy/attempts')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        scenarioId,
+        action: wrongAction,
+        timeMs: 1800,
+      });
+
+    expect(incorrectAttemptResponse.status).toBe(201);
+    expect(incorrectAttemptResponse.body.data.evaluation.correct).toBe(false);
+
     const attemptResponse = await request(app)
       .post('/api/v1/strategy/attempts')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -232,8 +252,13 @@ describe('API integration', () => {
       .set('Authorization', `Bearer ${accessToken}`);
 
     expect(progressResponse.status).toBe(200);
-    expect(progressResponse.body.data.attempts).toBeGreaterThanOrEqual(1);
+    expect(progressResponse.body.data.attempts).toBeGreaterThanOrEqual(2);
     expect(progressResponse.body.data.correct).toBeGreaterThanOrEqual(1);
     expect(progressResponse.body.data.averageResponseTimeMs).toBeGreaterThanOrEqual(1200);
+    expect(progressResponse.body.data.currentStreak).toBeGreaterThanOrEqual(1);
+    expect(progressResponse.body.data.bestStreak).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(progressResponse.body.data.recentMistakes)).toBe(true);
+    expect(progressResponse.body.data.recentMistakes[0].scenarioId).toBe(scenarioId);
+    expect(progressResponse.body.data.recentMistakes[0].correctAction).toBe(scenarioResponse.body.data.correctAction);
   });
 });

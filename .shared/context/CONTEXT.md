@@ -35,13 +35,14 @@ Design exploration is complete and the backend is partially operational. Three p
 - [x] Integration test slice completed: auth, sessions, hands, user stats, and strategy flows now have a real API integration test
 - [x] Docs cleanup slice completed: architecture, database, deployment, runbook, and style guide docs now reflect the current app instead of templates
 - [x] Analytics slice completed: `/users/me/stats` now supports period filtering and casino breakdowns, and the dashboard consumes those live analytics
+- [x] Strategy progression slice completed: trainer progress now includes streaks and a mistakes review queue with direct scenario reloads
 
 ---
 
 ## In Progress
 
 - [ ] Responsive web app implementation in small vertical slices
-- [ ] Chunk 6 — strategy progression, session metadata, or additional analytics polish
+- [ ] Chunk 7 — session metadata, responsible-play features, or deeper analytics polish
 
 ---
 
@@ -82,15 +83,16 @@ Docs run:         2026-05-14 — `README.md` and `docs/API.md` refreshed to matc
 Test run:         2026-05-14 — integration suite passed with 4 tests / 48 assertions against local Postgres after applying migrations
 Docs cleanup:     2026-05-14 — architecture, database, deployment, runbook, and style guide docs rewritten around the real app
 Analytics run:    2026-05-14 — typecheck passed; integration suite passed with 58 assertions after adding period and casino analytics coverage
+Progression run:  2026-05-14 — typecheck passed; integration suite passed with 67 assertions after adding streaks and mistakes review coverage
 ```
 
 ---
 
 ## Next Steps for Incoming Agent
 
-1. Complete Chunk 6: strategy progression, session metadata, or another product-depth slice
+1. Complete Chunk 7: session metadata, responsible-play features, or another product-depth slice
 2. Decide whether to split the single integration test into smaller focused files as coverage grows
-3. Add streaks, mistakes queue, tags, mood tracking, or further dashboard depth based on product priority
+3. Add tags, mood tracking, budget ring logic, or further dashboard depth based on product priority
 4. Continue shipping in small vertical slices with git checkpoints after each usable milestone
 
 ---
@@ -104,6 +106,7 @@ Analytics run:    2026-05-14 — typecheck passed; integration suite passed with
 - Integration coverage now exists in one end-to-end API test file, but unit coverage is still missing and the suite depends on a migrated local Postgres database.
 - Work should be delivered in smaller chunks with regular git checkpoints and markdown updates.
 - Trainer progress now uses real measured response time from scenario load until answer submission.
+- Trainer progress now includes `currentStreak`, `bestStreak`, and `recentMistakes`, and the UI can reload a missed scenario by ID for review.
 - Dashboard shortcuts now explicitly load the active session before opening the hand logger to avoid logging against stale selection state.
 - Core docs are now aligned to the real app; the biggest remaining gaps are product depth and polish rather than documentation drift.
 - `/users/me/stats` now supports `period=all|year|month|week` and returns `topCasinos`, session outcome summaries, and average session net.

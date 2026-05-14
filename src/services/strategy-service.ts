@@ -73,6 +73,18 @@ export interface StrategyProgress {
   accuracy: number | null;
   averageResponseTimeMs: number | null;
   lastAttemptAt: Date | null;
+  currentStreak: number;
+  bestStreak: number;
+  recentMistakes: StrategyMistake[];
+}
+
+export interface StrategyMistake {
+  scenarioId: string;
+  attemptedAt: Date;
+  action: StrategyAction;
+  correctAction: StrategyAction;
+  timesMissed: number;
+  scenario: Pick<StrategyScenario, 'id' | 'playerCards' | 'dealerUpcard' | 'playerTotal' | 'isSoft' | 'isPair' | 'difficulty'>;
 }
 
 export interface ScenarioFilters {
@@ -165,6 +177,15 @@ export async function getRandomScenario(
   return scenarios[index];
 }
 
+export async function getScenarioById(scenarioId: string): Promise<StrategyScenario> {
+  const scenario = await prisma.strategyScenario.findUnique({ where: { id: scenarioId } });
+  if (!scenario) {
+    throw new NotFoundError('Strategy scenario');
+  }
+
+  return scenario;
+}
+
 export async function submitAttempt(
   userId: string,
   scenarioId: string,
@@ -192,7 +213,7 @@ export async function submitAttempt(
 }
 
 export async function getUserProgress(userId: string): Promise<StrategyProgress> {
-  const [aggregate, latest] = await Promise.all([
+  const [aggregate, latest, attemptRows] = await Promise.all([
     prisma.strategyAttempt.aggregate({
       where: { userId },
       _count: { _all: true },
@@ -202,13 +223,32 @@ export async function getUserProgress(userId: string): Promise<StrategyProgress>
       where: { userId },
       orderBy: { attemptedAt: 'desc' },
     }),
+    prisma.strategyAttempt.findMany({
+      where: { userId },
+      orderBy: { attemptedAt: 'asc' },
+      include: {
+        scenario: {
+          select: {
+            id: true,
+            playerCards: true,
+            dealerUpcard: true,
+            playerTotal: true,
+            isSoft: true,
+            isPair: true,
+            difficulty: true,
+            correctAction: true,
+          },
+        },
+      },
+    }),
   ]);
 
-  const correct = await prisma.strategyAttempt.count({
-    where: { userId, correct: true },
-  });
-
   const attempts = aggregate._count._all;
+  const attemptsList = attemptsFromList(attemptRows);
+  const correct = attempts > 0 ? attemptsFromListCorrectCount(attemptsList) : 0;
+  const currentStreak = calculateCurrentStreak(attemptsList);
+  const bestStreak = calculateBestStreak(attemptsList);
+  const recentMistakes = buildRecentMistakes(attemptsList);
 
   return {
     attempts,
@@ -216,7 +256,104 @@ export async function getUserProgress(userId: string): Promise<StrategyProgress>
     accuracy: attempts > 0 ? correct / attempts : null,
     averageResponseTimeMs: aggregate._avg.timeMs === null ? null : Math.round(aggregate._avg.timeMs),
     lastAttemptAt: latest?.attemptedAt ?? null,
+    currentStreak,
+    bestStreak,
+    recentMistakes,
   };
+}
+
+function attemptsFromList(
+  attempts: Array<StrategyAttempt & {
+    scenario: Pick<StrategyScenario, 'id' | 'playerCards' | 'dealerUpcard' | 'playerTotal' | 'isSoft' | 'isPair' | 'difficulty' | 'correctAction'>;
+  }>
+) {
+  return attempts;
+}
+
+function attemptsFromListCorrectCount(
+  attempts: Array<StrategyAttempt & {
+    scenario: Pick<StrategyScenario, 'id' | 'playerCards' | 'dealerUpcard' | 'playerTotal' | 'isSoft' | 'isPair' | 'difficulty' | 'correctAction'>;
+  }>
+) {
+  return attempts.filter((attempt) => attempt.correct).length;
+}
+
+function calculateCurrentStreak(
+  attempts: Array<StrategyAttempt & {
+    scenario: Pick<StrategyScenario, 'id' | 'playerCards' | 'dealerUpcard' | 'playerTotal' | 'isSoft' | 'isPair' | 'difficulty' | 'correctAction'>;
+  }>
+) {
+  let streak = 0;
+
+  for (let index = attempts.length - 1; index >= 0; index -= 1) {
+    if (!attempts[index].correct) break;
+    streak += 1;
+  }
+
+  return streak;
+}
+
+function calculateBestStreak(
+  attempts: Array<StrategyAttempt & {
+    scenario: Pick<StrategyScenario, 'id' | 'playerCards' | 'dealerUpcard' | 'playerTotal' | 'isSoft' | 'isPair' | 'difficulty' | 'correctAction'>;
+  }>
+) {
+  let best = 0;
+  let current = 0;
+
+  for (const attempt of attempts) {
+    if (attempt.correct) {
+      current += 1;
+      best = Math.max(best, current);
+    } else {
+      current = 0;
+    }
+  }
+
+  return best;
+}
+
+function buildRecentMistakes(
+  attempts: Array<StrategyAttempt & {
+    scenario: Pick<StrategyScenario, 'id' | 'playerCards' | 'dealerUpcard' | 'playerTotal' | 'isSoft' | 'isPair' | 'difficulty' | 'correctAction'>;
+  }>
+): StrategyMistake[] {
+  const incorrectAttempts = [...attempts]
+    .filter((attempt) => !attempt.correct)
+    .sort((left, right) => right.attemptedAt.getTime() - left.attemptedAt.getTime());
+
+  const missCounts = new Map<string, number>();
+  for (const attempt of incorrectAttempts) {
+    missCounts.set(attempt.scenarioId, (missCounts.get(attempt.scenarioId) ?? 0) + 1);
+  }
+
+  const seen = new Set<string>();
+  const mistakes: StrategyMistake[] = [];
+
+  for (const attempt of incorrectAttempts) {
+    if (seen.has(attempt.scenarioId)) continue;
+    seen.add(attempt.scenarioId);
+    mistakes.push({
+      scenarioId: attempt.scenarioId,
+      attemptedAt: attempt.attemptedAt,
+      action: attempt.action,
+      correctAction: attempt.scenario.correctAction,
+      timesMissed: missCounts.get(attempt.scenarioId) ?? 1,
+      scenario: {
+        id: attempt.scenario.id,
+        playerCards: attempt.scenario.playerCards,
+        dealerUpcard: attempt.scenario.dealerUpcard,
+        playerTotal: attempt.scenario.playerTotal,
+        isSoft: attempt.scenario.isSoft,
+        isPair: attempt.scenario.isPair,
+        difficulty: attempt.scenario.difficulty,
+      },
+    });
+
+    if (mistakes.length >= 5) break;
+  }
+
+  return mistakes;
 }
 
 function buildHardCards(total: number): string[] {

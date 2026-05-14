@@ -445,6 +445,12 @@ Response `200`:
 }
 ```
 
+### `GET /strategy/scenarios/:id`
+
+Fetch a specific scenario by ID. This is used by the trainer review queue to reopen missed hands.
+
+Response `200`: same scenario shape as `GET /strategy/scenarios/random`.
+
 ### `POST /strategy/attempts`
 
 Request:
@@ -493,7 +499,27 @@ Response `200`:
     "correct": 13,
     "accuracy": 0.7222,
     "averageResponseTimeMs": 1420,
-    "lastAttemptAt": "2026-05-14T20:00:00.000Z"
+    "lastAttemptAt": "2026-05-14T20:00:00.000Z",
+    "currentStreak": 3,
+    "bestStreak": 6,
+    "recentMistakes": [
+      {
+        "scenarioId": "uuid",
+        "attemptedAt": "2026-05-14T20:00:00.000Z",
+        "action": "HIT",
+        "correctAction": "STAND",
+        "timesMissed": 2,
+        "scenario": {
+          "id": "uuid",
+          "playerCards": ["10", "6"],
+          "dealerUpcard": "6",
+          "playerTotal": 16,
+          "isSoft": false,
+          "isPair": false,
+          "difficulty": 3
+        }
+      }
+    ]
   }
 }
 ```

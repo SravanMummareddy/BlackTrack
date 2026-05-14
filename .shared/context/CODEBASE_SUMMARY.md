@@ -64,12 +64,13 @@ Current status of `public/`:
 - dashboard shell hydrates from `/users/me`, `/users/me/stats`, `/sessions`, and `/strategy/progress`
 - sessions workspace now supports selection, create session, complete session, and hand logging against the live API
 - trainer workspace now supports auto-loading scenarios, attempt submission, live progress metrics, next-hand flow, and a responsive reference sidebar
+- trainer progress now includes streaks plus a mistakes review queue with direct scenario reloads
 - dashboard now includes active-session focus, quick actions, and improved desktop/tablet composition
 - dashboard analytics now support period filters and per-casino bankroll breakdowns from `/users/me/stats`
 - `README.md`, `docs/API.md`, and the core architecture/operations docs now describe the real app
 - baseline API integration coverage now exists in `tests/integration/api.integration.test.ts`
 - core docs now describe the real app instead of generic templates
-- next major slice is deeper product features like streaks, mistakes review, tags, mood tracking, or more analytics
+- next major slice is deeper product features like tags, mood tracking, responsible-play settings, or more analytics
 
 ---
 
@@ -90,7 +91,7 @@ Business logic layer. **This is where most BlackStack work happens.**
 - Session CRUD and net P/L computation → `session-service.ts`
 - Hand logging and session stats → `hand-service.ts`
 - Basic strategy engine + seed data generation → `strategy-service.ts`
-- Analytics now include period filtering and per-casino breakdowns via `/users/me/stats`; deeper bankroll features are still TBD
+- Strategy progression now includes streak and mistake-queue computation, and analytics include period filtering plus per-casino breakdowns; deeper bankroll features are still TBD
 
 ### `src/database/`
 Prisma singleton + DB health helpers.

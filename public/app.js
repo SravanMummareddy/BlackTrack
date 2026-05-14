@@ -546,6 +546,8 @@ function renderTrainerView() {
           ${renderDetailStat("Correct", formatCount(state.trainerProgress?.correct))}
           ${renderDetailStat("Accuracy", formatPercent(state.trainerProgress?.accuracy))}
           ${renderDetailStat("Avg Time", formatDuration(state.trainerProgress?.averageResponseTimeMs))}
+          ${renderDetailStat("Current Streak", formatCount(state.trainerProgress?.currentStreak))}
+          ${renderDetailStat("Best Streak", formatCount(state.trainerProgress?.bestStreak))}
         </div>
         <div class="board-surface">
           ${state.loading.trainer ? `
@@ -561,6 +563,17 @@ function renderTrainerView() {
           `}
         </div>
         ${state.trainerFeedback ? renderTrainerFeedback() : ""}
+        <div class="session-card">
+          <div class="section-head">
+            <div>
+              <h2>Review Queue</h2>
+              <p>Missed hands are resurfaced here so you can retake them on purpose.</p>
+            </div>
+          </div>
+          <div class="session-list">
+            ${state.trainerProgress?.recentMistakes?.length ? state.trainerProgress.recentMistakes.map(renderTrainerMistakeRow).join("") : renderEmptyCard("No mistakes in queue", "Once you miss a strategy hand, it will show up here with a quick path back into review.")}
+          </div>
+        </div>
       </article>
       <aside class="trainer-card trainer-aside">
         <div class="section-head">
@@ -619,6 +632,25 @@ function renderTrainerFeedback() {
       <p class="helper"><strong>Rule of thumb:</strong> ${escapeHtml(feedback.ruleOfThumb)}</p>
       <div class="toolbar">
         <button class="primary-btn" data-action="new-scenario">Next hand</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderTrainerMistakeRow(mistake) {
+  return `
+    <div class="session-row">
+      <div class="row-top">
+        <div>
+          <div class="session-title">${escapeHtml(getScenarioLabel(mistake.scenario))}</div>
+          <div class="helper">Dealer ${escapeHtml(mistake.scenario.dealerUpcard)} · missed ${formatCount(mistake.timesMissed)} time${mistake.timesMissed === 1 ? "" : "s"} · last ${formatDateTime(mistake.attemptedAt)}</div>
+        </div>
+        <strong class="money-negative">${escapeHtml(shortActionLabel(mistake.action))}</strong>
+      </div>
+      <div class="row-bottom">
+        <span>Correct ${escapeHtml(shortActionLabel(mistake.correctAction))}</span>
+        <span>Difficulty ${formatCount(mistake.scenario.difficulty)}</span>
+        <button class="ghost-btn" data-action="review-scenario" data-scenario-id="${mistake.scenarioId}">Review hand</button>
       </div>
     </div>
   `;
@@ -1050,6 +1082,14 @@ async function onActionClick(event) {
     return;
   }
 
+  if (action === "review-scenario") {
+    const scenarioId = event.currentTarget.dataset.scenarioId;
+    if (!scenarioId) return;
+    state.currentView = "trainer";
+    await loadTrainerScenarioById(scenarioId);
+    return;
+  }
+
   if (action === "set-trainer-filter") {
     state.trainerFilter = event.currentTarget.dataset.filter;
     state.trainerFeedback = null;
@@ -1278,6 +1318,23 @@ async function loadTrainerScenario() {
   }
 }
 
+async function loadTrainerScenarioById(scenarioId) {
+  state.loading.trainer = true;
+  state.trainerFeedback = null;
+  state.trainerStartedAt = null;
+  render();
+
+  try {
+    state.trainerScenario = await api(`/strategy/scenarios/${scenarioId}`);
+    state.trainerStartedAt = Date.now();
+  } catch (error) {
+    addNotice(error.message || "Could not load that review hand.", "error");
+  } finally {
+    state.loading.trainer = false;
+    render();
+  }
+}
+
 async function submitTrainerAttempt(action) {
   if (!state.trainerScenario) {
     throw new Error("Deal a scenario first.");
@@ -1468,6 +1525,17 @@ function formatPeriodLabel(value) {
 
 function describeStatsWindow() {
   return formatPeriodLabel(state.stats?.period ?? state.statsPeriod);
+}
+
+function getScenarioLabel(scenario) {
+  if (scenario.isPair) return `Pair of ${scenario.playerCards[0]}s`;
+  if (scenario.isSoft) return `Soft ${scenario.playerTotal}`;
+  return `Hard ${scenario.playerTotal}`;
+}
+
+function shortActionLabel(action) {
+  if (!action) return "—";
+  return String(action).replaceAll("_", " ");
 }
 
 function escapeHtml(value) {
