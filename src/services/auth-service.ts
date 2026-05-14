@@ -39,7 +39,7 @@ export async function login(email: string, password: string): Promise<AuthTokens
 export async function refreshTokens(refreshToken: string): Promise<AuthTokens> {
   const { sub } = verifyRefreshToken(refreshToken);
   const user = await prisma.user.findUnique({ where: { id: sub } });
-  if (!user) throw new UnauthorizedError('User not found');
+  if (!user) throw new UnauthorizedError('Invalid or expired refresh token');
 
   return makeTokens(user.id);
 }
