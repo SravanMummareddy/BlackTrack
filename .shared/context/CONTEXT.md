@@ -32,14 +32,14 @@ Design exploration is complete and the backend is partially operational. Three p
 - [x] Chunk 3 completed: trainer workspace now auto-loads a hand on entry, tracks real response time, surfaces progress metrics, and advances directly to the next hand
 - [x] Chunk 4 completed: dashboard and trainer layouts were refined for desktop/tablet, with quick actions, active-session focus, and a safer hand-log shortcut
 - [x] Docs slice completed: `README.md` and `docs/API.md` now reflect the real Blackjack tracker + trainer application
+- [x] Integration test slice completed: auth, sessions, hands, user stats, and strategy flows now have a real API integration test
 
 ---
 
 ## In Progress
 
 - [ ] Responsive web app implementation in small vertical slices
-- [ ] Chunk 5 — tests, docs refresh, and remaining UI polish
-- [ ] API test coverage
+- [ ] Chunk 5 — remaining docs cleanup and final polish
 - [ ] Template docs cleanup for architecture, database, deployment, runbook, and style guide
 
 ---
@@ -71,22 +71,23 @@ Design exploration is complete and the backend is partially operational. Three p
 
 ```
 Unit tests:       Not run
-Integration:      Not run
+Integration:      `tests/integration/api.integration.test.ts`
 Coverage:         Unknown
 Last run:         2026-05-14 — `bun run typecheck` passing; `/` verified by curl; auth flows verified by live API requests
 Sessions run:     2026-05-14 — create session, log hand, complete session, list session, and fetch session stats verified by live API requests
 Trainer run:      2026-05-14 — random scenario, attempt submission, and progress metrics verified by live API requests
 UI polish run:    2026-05-14 — responsive dashboard/trainer layout refinements applied; client syntax verified
 Docs run:         2026-05-14 — `README.md` and `docs/API.md` refreshed to match the live backend and web app
+Test run:         2026-05-14 — integration suite passed with 4 tests / 48 assertions against local Postgres after applying migrations
 ```
 
 ---
 
 ## Next Steps for Incoming Agent
 
-1. Complete Chunk 5: add integration tests and clean up the remaining template-heavy docs
-2. Add integration tests for auth, session lifecycle, hands, user stats, and strategy endpoints
-3. Refresh `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/DEPLOYMENT.md`, and `docs/RUNBOOK.md` so they stop describing placeholder infrastructure
+1. Complete Chunk 5: clean up the remaining template-heavy docs and final polish
+2. Refresh `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/DEPLOYMENT.md`, and `docs/RUNBOOK.md` so they stop describing placeholder infrastructure
+3. Decide whether to split the single integration test into smaller focused files as coverage grows
 4. Continue shipping in small vertical slices with git checkpoints after each usable milestone
 
 ---
@@ -97,7 +98,7 @@ Docs run:         2026-05-14 — `README.md` and `docs/API.md` refreshed to matc
 - Money remains integer cents everywhere in the API and DB.
 - Strategy scenarios are seeded from the same lookup tables used for runtime evaluation to avoid drift.
 - The user explicitly wants the original prototype/frontend preserved as reference while the real web app is built separately.
-- No automated endpoint tests have been added yet, so behavior is only compiler-verified right now.
+- Integration coverage now exists in one end-to-end API test file, but unit coverage is still missing and the suite depends on a migrated local Postgres database.
 - Work should be delivered in smaller chunks with regular git checkpoints and markdown updates.
 - Trainer progress now uses real measured response time from scenario load until answer submission.
 - Dashboard shortcuts now explicitly load the active session before opening the hand logger to avoid logging against stale selection state.
