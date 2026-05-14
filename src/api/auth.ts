@@ -1,11 +1,22 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import { rateLimit } from 'express-rate-limit';
 import * as authService from '../services/auth-service';
 import { authenticate } from '../middleware';
 import { ValidationError } from '../utils/errors';
 import { schemas } from '../utils/validation';
 
 const router = Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: { code: 'RATE_LIMITED', message: 'Too many auth attempts, please try again later.' } },
+});
+
+router.use(authLimiter);
 
 const registerSchema = z.object({
   email: schemas.email,
