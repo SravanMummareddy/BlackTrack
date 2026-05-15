@@ -672,6 +672,37 @@ button.session-row {
   cursor: not-allowed;
 }
 
+.metadata-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metadata-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.metadata-chip:hover {
+  border-color: rgba(212, 175, 106, 0.28);
+  background: rgba(212, 175, 106, 0.07);
+}
+
+.metadata-chip:active { transform: translateY(1px); }
+
+.metadata-chip input {
+  width: auto;
+  accent-color: var(--gold);
+}
+
 /* ── Trainer action buttons ─────────────────────────── */
 .trainer-actions {
   margin-top: 20px;
@@ -762,6 +793,22 @@ button.session-row {
 .field input::placeholder,
 .field textarea::placeholder {
   color: var(--ghost);
+}
+
+.field .metadata-chip {
+  color: var(--ink-soft);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+}
+
+.field .metadata-chip input {
+  width: auto;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
 }
 
 /* ── Text helpers ───────────────────────────────────── */
@@ -952,6 +999,36 @@ button.session-row {
 .session-detail-grid {
   display: grid;
   gap: 16px;
+}
+
+.session-meta,
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-meta {
+  margin-top: 12px;
+}
+
+.meta-item,
+.tag-list span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.tag-list span {
+  color: var(--gold-soft);
+  border-color: rgba(212, 175, 106, 0.22);
 }
 
 .detail-grid,

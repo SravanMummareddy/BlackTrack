@@ -256,7 +256,9 @@ Request:
   "tableMax": 20000,
   "decks": 6,
   "buyIn": 30000,
-  "notes": "Crowded pit, staying disciplined."
+  "notes": "Crowded pit, staying disciplined.",
+  "tags": ["disciplined", "heads-up"],
+  "moodStart": 4
 }
 ```
 
@@ -277,6 +279,10 @@ Response `201`:
     "buyIn": 30000,
     "cashOut": null,
     "notes": "Crowded pit, staying disciplined.",
+    "tags": ["disciplined", "heads-up"],
+    "moodStart": 4,
+    "moodEnd": null,
+    "completionNotes": null,
     "createdAt": "2026-05-14T20:00:00.000Z",
     "updatedAt": "2026-05-14T20:00:00.000Z",
     "handsPlayed": 0,
@@ -298,6 +304,8 @@ Response `200`:
       "status": "ACTIVE",
       "buyIn": 30000,
       "cashOut": null,
+      "tags": ["disciplined", "heads-up"],
+      "moodStart": 4,
       "handsPlayed": 3,
       "handsWon": 1,
       "netProfit": null
@@ -324,11 +332,15 @@ Request fields are all optional:
 {
   "notes": "Left when game quality dipped.",
   "cashOut": 36200,
-  "status": "COMPLETED"
+  "status": "COMPLETED",
+  "tags": ["disciplined"],
+  "moodEnd": 5,
+  "completionNotes": "Stayed patient and left after the planned shoe."
 }
 ```
 
 When `status` becomes `COMPLETED`, `endedAt` is set if it was empty.
+`tags` accepts up to 8 trimmed tags, each 32 characters or fewer. `moodStart` and `moodEnd` are integers from `1` to `5`.
 
 ### `DELETE /sessions/:id`
 

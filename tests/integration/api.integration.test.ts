@@ -7,7 +7,7 @@ process.env.JWT_SECRET ??= 'blackstack-test-access-secret';
 process.env.JWT_REFRESH_SECRET ??= 'blackstack-test-refresh-secret';
 process.env.LOG_LEVEL ??= 'error';
 
-type AppModule = typeof import('../../src/index');
+type AppModule = typeof import('../../src/app');
 type DatabaseModule = typeof import('../../src/database');
 type StrategyServiceModule = typeof import('../../src/services/strategy-service');
 
@@ -26,7 +26,7 @@ let sessionId = '';
 let scenarioId = '';
 
 beforeAll(async () => {
-  ({ app } = await import('../../src/index'));
+  ({ app } = await import('../../src/app'));
   ({ prisma } = await import('../../src/database'));
   ({ buildScenarioSeedData } = await import('../../src/services/strategy-service'));
 
@@ -117,10 +117,14 @@ describe('API integration', () => {
         decks: 6,
         buyIn: 30000,
         notes: 'Integration test session',
+        tags: ['disciplined', 'heads-up'],
+        moodStart: 4,
       });
 
     expect(createSessionResponse.status).toBe(201);
     expect(createSessionResponse.body.data.status).toBe('ACTIVE');
+    expect(createSessionResponse.body.data.tags).toEqual(['disciplined', 'heads-up']);
+    expect(createSessionResponse.body.data.moodStart).toBe(4);
     sessionId = createSessionResponse.body.data.id;
 
     const listSessionsResponse = await request(app)
@@ -130,6 +134,10 @@ describe('API integration', () => {
     expect(listSessionsResponse.status).toBe(200);
     expect(listSessionsResponse.body.pagination.page).toBe(1);
     expect(listSessionsResponse.body.data.some((session: { id: string }) => session.id === sessionId)).toBe(true);
+    expect(listSessionsResponse.body.data.find((session: { id: string }) => session.id === sessionId).tags).toEqual([
+      'disciplined',
+      'heads-up',
+    ]);
 
     const logHandResponse = await request(app)
       .post(`/api/v1/sessions/${sessionId}/hands`)
@@ -173,11 +181,15 @@ describe('API integration', () => {
       .send({
         cashOut: 32500,
         status: 'COMPLETED',
+        moodEnd: 5,
+        completionNotes: 'Stayed patient and left after the planned shoe.',
       });
 
     expect(completeSessionResponse.status).toBe(200);
     expect(completeSessionResponse.body.data.status).toBe('COMPLETED');
     expect(completeSessionResponse.body.data.cashOut).toBe(32500);
+    expect(completeSessionResponse.body.data.moodEnd).toBe(5);
+    expect(completeSessionResponse.body.data.completionNotes).toBe('Stayed patient and left after the planned shoe.');
 
     const userStatsResponse = await request(app)
       .get('/api/v1/users/me/stats')

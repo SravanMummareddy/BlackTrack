@@ -8,6 +8,18 @@ import { schemas } from '../utils/validation';
 const router = Router();
 
 const centsField = z.number().int().min(0);
+const moodField = z.number().int().min(1).max(5);
+const tagField = z
+  .string()
+  .trim()
+  .min(1, 'Tags cannot be empty')
+  .max(32, 'Tags must be 32 characters or fewer')
+  .regex(/^[a-z0-9][a-z0-9 -]*$/i, 'Tags can only include letters, numbers, spaces, and hyphens')
+  .transform((tag) => tag.toLowerCase());
+const tagsField = z
+  .array(tagField)
+  .max(8, 'Use 8 tags or fewer')
+  .transform((tags) => Array.from(new Set(tags)));
 
 const createSchema = z.object({
   casinoName: z.string().min(1, 'Casino name is required').trim(),
@@ -15,7 +27,9 @@ const createSchema = z.object({
   tableMax: centsField,
   decks: z.number().int().positive().optional(),
   buyIn: centsField,
-  notes: z.string().optional(),
+  notes: z.string().trim().max(2000).optional(),
+  tags: tagsField.optional(),
+  moodStart: moodField.optional(),
 }).refine(d => d.tableMax >= d.tableMin, {
   message: 'tableMax must be >= tableMin',
   path: ['tableMax'],
@@ -23,9 +37,12 @@ const createSchema = z.object({
 
 const updateSchema = z.object({
   casinoName: z.string().min(1).trim().optional(),
-  notes: z.string().optional(),
+  notes: z.string().trim().max(2000).optional(),
   cashOut: centsField.optional(),
   status: z.enum(['ACTIVE', 'COMPLETED']).optional(),
+  tags: tagsField.optional(),
+  moodEnd: moodField.optional(),
+  completionNotes: z.string().trim().max(2000).optional(),
 });
 
 function parseBody<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {

@@ -6,29 +6,24 @@
 
 We are in development phase. Ship every slice end-to-end (schema → API → UI → seed/tests) before moving on. Polish, automation tests, and browser verification come AFTER feature completeness.
 
-1. **Slice A — Session metadata** (in progress next)
-   - Tags on sessions (predefined chips + free-form)
-   - Pre-session mood (1–5) and post-session mood on completion
-   - Completion notes textarea on session-complete modal
-   - Surfaced in session detail + dashboard
-2. **Slice B — Budget ring (responsible play)**
+1. **Slice B — Budget ring (responsible play)** (next)
    - Monthly budget setting on user profile
    - `% used`, `days left`, `net P/L` computed server-side from sessions in the current month
    - Dashboard ring widget + warning state when nearing/over budget
-3. **Slice C — Session limits + break mode**
+2. **Slice C — Session limits + break mode**
    - Per-session loss limit, time limit (set at session create)
    - Reflection prompt when limits are hit; option to end or extend
    - 24h / 7d / 30d break mode that blocks new session creation
-4. **Slice D — Mood × result analytics**
+3. **Slice D — Mood × result analytics**
    - Aggregation endpoint returning sessions grouped by mood bucket with net P/L and win rate
    - Dashboard scatter / grouped-bar widget
-5. **Slice E — Trainer depth**
+4. **Slice E — Trainer depth**
    - Count-drill scenarios (running count / true count)
    - Strategy-deviation scenarios (illustrious 18)
    - Difficulty slider in trainer
-6. **Slice F — Profile / account management**
+5. **Slice F — Profile / account management**
    - Change password, export data (JSON), delete account
-7. **Slice G — Strategy content verification**
+6. **Slice G — Strategy content verification**
    - Confirm seeded scenarios + evaluator against reference basic-strategy chart
 
 Each slice ends with: typecheck pass, integration test added or updated, commit, doc refresh.
@@ -45,6 +40,7 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] **API tests** — Add integration coverage for auth, sessions, hands, user stats, and strategy endpoints
 - [x] **Analytics aggregations** — Period-based stats and per-casino dashboard breakdowns
 - [x] **Strategy progression features** — Streaks and review resurfacing
+- [x] **Session metadata** — Tags, pre/post session mood, and completion notes in API + web app
 - [ ] **Strategy content verification** — Confirm seeded scenarios and evaluator outputs against a reference basic-strategy chart
 - [x] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
 - [x] **Docs template cleanup** — Rewrite architecture, database, deployment, runbook, and style-guide docs around the real app
@@ -55,8 +51,7 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [ ] **Git checkpoints** — Commit after each completed vertical slice with clear messages
 - [ ] **MD handoff cadence** — Refresh `.shared/context/*.md` and key docs after each milestone
 - [ ] **Budget ring logic** — Monthly budget setting per user; `% used`, `days left`, `net P/L` computed server-side
-- [ ] **Mood × result data** — Store pre/post session mood; expose in analytics for scatter chart
-- [ ] **Tags system** — Predefined tags (disciplined, tilted, chasing, lucky) + free-form notes on sessions
+- [ ] **Mood × result analytics** — Aggregate stored pre/post session mood for dashboard insight
 
 ## Low Priority
 
@@ -89,7 +84,7 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Hand logging nested under sessions
 - [x] Session-level hand stats
 - [x] Responsive session workspace in the web app
-- [ ] Tags + mood
+- [x] Tags + mood
 
 ### Phase 3 — Analytics
 - [x] Overall bankroll stats endpoint
@@ -133,3 +128,4 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Docs cleanup slice complete: template-heavy docs rewritten for the real app — 2026-05-14
 - [x] Analytics slice complete: period stats and casino breakdowns added to backend and dashboard — 2026-05-14
 - [x] Strategy progression slice complete: streaks and missed-hand review added to backend and trainer UI — 2026-05-14
+- [x] Session metadata slice complete: tags, pre/post mood, completion notes, API docs, and integration assertions added — 2026-05-15

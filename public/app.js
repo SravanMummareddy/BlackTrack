@@ -8,6 +8,15 @@ const PASSWORD_RULES = [
   { id: "digit", label: "One number (0-9)", test: (p) => /\d/.test(p) },
 ];
 
+const SESSION_TAG_OPTIONS = ["disciplined", "tilted", "chasing", "lucky", "crowded", "heads-up"];
+const MOOD_OPTIONS = [
+  { value: 1, label: "1 - Low" },
+  { value: 2, label: "2 - Tense" },
+  { value: 3, label: "3 - Steady" },
+  { value: 4, label: "4 - Sharp" },
+  { value: 5, label: "5 - Locked in" },
+];
+
 const state = {
   authMode: "login",
   guestMode: false,
@@ -406,6 +415,7 @@ function renderDashboardView() {
               <label class="muted-label">Active Session</label>
               <h3>${escapeHtml(activeSession.casinoName)}</h3>
               <p>${formatDateTime(activeSession.startedAt)} · ${activeSession.decks}-deck table · ${formatMoney(activeSession.tableMin)} minimum</p>
+              ${renderSessionMetadata(activeSession)}
               <div class="detail-grid compact">
                 ${renderDetailStat("Buy-In", formatMoney(activeSession.buyIn))}
                 ${renderDetailStat("Hands", formatCount(activeSession.handsPlayed))}
@@ -568,7 +578,9 @@ function renderSessionDetail() {
       ${renderDetailStat("Hands Played", formatCount(state.sessionStats?.handsPlayed ?? session.handsPlayed))}
       ${renderDetailStat("Win Rate", formatPercent(state.sessionStats?.winRate))}
     </div>
+    ${renderSessionMetadata(session)}
     ${session.notes ? `<div class="feedback info"><strong>Notes</strong><br />${escapeHtml(session.notes)}</div>` : ""}
+    ${session.completionNotes ? `<div class="feedback info"><strong>Completion Notes</strong><br />${escapeHtml(session.completionNotes)}</div>` : ""}
     <div class="split-row">
       <h3 class="panel-title">Hand History</h3>
       <div class="toolbar">
@@ -810,6 +822,31 @@ function renderLoadingState() {
   `;
 }
 
+function renderSessionMetadata(session) {
+  const tags = renderSessionTags(session.tags);
+  const moodStart = formatMood(session.moodStart);
+  const moodEnd = formatMood(session.moodEnd);
+
+  if (!tags && !moodStart && !moodEnd) return "";
+
+  return `
+    <div class="session-meta">
+      ${moodStart ? `<span class="meta-item">Start ${escapeHtml(moodStart)}</span>` : ""}
+      ${moodEnd ? `<span class="meta-item">End ${escapeHtml(moodEnd)}</span>` : ""}
+      ${tags}
+    </div>
+  `;
+}
+
+function renderSessionTags(tags = []) {
+  if (!Array.isArray(tags) || tags.length === 0) return "";
+  return `
+    <div class="tag-list">
+      ${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}
+    </div>
+  `;
+}
+
 function renderSessionRow(session) {
   const netProfit = session.netProfit;
   return `
@@ -823,8 +860,10 @@ function renderSessionRow(session) {
       </div>
       <div class="row-bottom">
         <span>${formatMoney(session.buyIn)} buy-in</span>
+        <span>${formatMood(session.moodStart) || "Mood open"}</span>
         <strong class="${toneClass(netProfit)}">${netProfit === null ? "Open" : formatMoney(netProfit)}</strong>
       </div>
+      ${renderSessionTags(session.tags)}
     </button>
   `;
 }
@@ -942,6 +981,22 @@ function renderModal(id, title, copy, body) {
   `;
 }
 
+function renderMoodOptions(selectedValue) {
+  return MOOD_OPTIONS.map((mood) => `
+    <option value="${mood.value}" ${Number(selectedValue) === mood.value ? "selected" : ""}>${mood.label}</option>
+  `).join("");
+}
+
+function renderTagCheckboxes(selectedTags = []) {
+  const selected = new Set(selectedTags);
+  return SESSION_TAG_OPTIONS.map((tag) => `
+    <label class="metadata-chip">
+      <input type="checkbox" name="tags" value="${tag}" ${selected.has(tag) ? "checked" : ""} />
+      <span>${escapeHtml(tag)}</span>
+    </label>
+  `).join("");
+}
+
 function renderSessionCreateForm() {
   return `
     <form class="surface-form" data-form="create-session">
@@ -966,6 +1021,23 @@ function renderSessionCreateForm() {
           <label for="session-buyin">Buy-In ($)</label>
           <input id="session-buyin" name="buyIn" type="number" min="0" step="1" value="300" required />
         </div>
+        <div class="field">
+          <label for="session-mood-start">Starting Mood</label>
+          <select id="session-mood-start" name="moodStart">
+            <option value="">Not set</option>
+            ${renderMoodOptions()}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Session Tags</label>
+        <div class="metadata-picker">
+          ${renderTagCheckboxes()}
+        </div>
+      </div>
+      <div class="field">
+        <label for="session-custom-tags">Custom Tags</label>
+        <input id="session-custom-tags" name="customTags" type="text" placeholder="solo table, late shoe" />
       </div>
       <div class="field">
         <label for="session-notes">Notes</label>
@@ -982,6 +1054,17 @@ function renderCompleteSessionForm() {
       <div class="field">
         <label for="complete-cashout">Cash-Out ($)</label>
         <input id="complete-cashout" name="cashOut" type="number" min="0" step="1" required />
+      </div>
+      <div class="field">
+        <label for="complete-mood-end">Ending Mood</label>
+        <select id="complete-mood-end" name="moodEnd">
+          <option value="">Not set</option>
+          ${renderMoodOptions()}
+        </select>
+      </div>
+      <div class="field">
+        <label for="complete-notes">Completion Notes</label>
+        <textarea id="complete-notes" name="completionNotes" placeholder="What changed, whether you followed the plan, and why you left."></textarea>
       </div>
       <button class="primary-btn" type="submit">Complete session</button>
     </form>
@@ -1410,6 +1493,7 @@ async function logoutUser() {
 }
 
 async function createSession(formData) {
+  const moodStart = optionalNumber(formData.get("moodStart"));
   const payload = {
     casinoName: String(formData.get("casinoName") || "").trim(),
     tableMin: dollarsToCents(formData.get("tableMin")),
@@ -1417,6 +1501,8 @@ async function createSession(formData) {
     decks: Number(formData.get("decks")),
     buyIn: dollarsToCents(formData.get("buyIn")),
     notes: String(formData.get("notes") || "").trim() || undefined,
+    tags: parseSessionTags(formData),
+    moodStart: moodStart || undefined,
   };
 
   const data = await api("/sessions", {
@@ -1436,11 +1522,16 @@ async function completeSession(formData) {
     throw new Error("Choose a session first.");
   }
 
+  const moodEnd = optionalNumber(formData.get("moodEnd"));
+  const completionNotes = String(formData.get("completionNotes") || "").trim();
+
   await api(`/sessions/${state.selectedSessionId}`, {
     method: "PATCH",
     body: JSON.stringify({
       cashOut: dollarsToCents(formData.get("cashOut")),
       status: "COMPLETED",
+      moodEnd: moodEnd || undefined,
+      completionNotes: completionNotes || undefined,
     }),
   });
 
@@ -1589,6 +1680,14 @@ function primeModal(name) {
     if (input) {
       input.value = String(Math.round((state.selectedSession.buyIn ?? 0) / 100));
     }
+    const mood = document.querySelector("#complete-mood-end");
+    if (mood && state.selectedSession.moodEnd) {
+      mood.value = String(state.selectedSession.moodEnd);
+    }
+    const notes = document.querySelector("#complete-notes");
+    if (notes) {
+      notes.value = state.selectedSession.completionNotes ?? "";
+    }
   }
 
   if (name === "hand-log") {
@@ -1687,6 +1786,22 @@ function dollarsToCents(value) {
   return Math.round(Number(value || 0) * 100);
 }
 
+function optionalNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseSessionTags(formData) {
+  const selectedTags = formData.getAll("tags");
+  const customTags = String(formData.get("customTags") || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set([...selectedTags, ...customTags].map((tag) => String(tag).toLowerCase()))).slice(0, 8);
+}
+
 function parseCards(value) {
   return String(value || "")
     .split(",")
@@ -1741,6 +1856,11 @@ function formatPeriodLabel(value) {
   if (value === "month") return "Last 30 days";
   if (value === "year") return "Last 12 months";
   return "All time";
+}
+
+function formatMood(value) {
+  const mood = MOOD_OPTIONS.find((option) => option.value === Number(value));
+  return mood?.label ?? "";
 }
 
 function describeStatsWindow() {

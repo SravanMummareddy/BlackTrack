@@ -42,13 +42,19 @@ Design exploration is complete and the backend is partially operational. Three p
   - Real guest mode: `try-guest` action shows the basic-strategy chart reference + banner explaining sessions/trainer progress require an account; `exit-guest` returns to the sign-in form. Topbar exposes the CTA.
   - Post-login routing fixed: `submitAuth` sets `state.currentView = "dashboard"` and clears `state.guestMode`; `hydrateApp` wraps the parallel hydration in `try/finally` so `state.loading.app` always clears (kills the stuck "Loading application" screen).
   - Logout fully resets `loading.app`, `guestMode`, and `authMode`.
+- [x] Slice A session metadata (2026-05-15):
+  - API validators now accept and normalize session `tags`, `moodStart`, `moodEnd`, and `completionNotes`.
+  - Integration coverage was updated to assert create/list/complete metadata round trips.
+  - Production web app create-session and complete-session modals now collect predefined tags, custom tags, starting mood, ending mood, and completion notes.
+  - Dashboard active-session focus, session rows, and session detail now surface tags, mood, and completion notes.
+  - `docs/API.md` documents the new session metadata request/response fields.
 
 ---
 
 ## In Progress
 
 - [ ] Responsive web app implementation in small vertical slices
-- [ ] Chunk 7 — session metadata, responsible-play features, or deeper analytics polish
+- [ ] Chunk 7 — responsible-play features or deeper analytics polish
 
 ---
 
@@ -69,8 +75,8 @@ Design exploration is complete and the backend is partially operational. Three p
 - `src/services/strategy-service.ts` — ported strategy tables, evaluation logic, seed payload builder
 - `scripts/seed-strategy.ts` — idempotent seed script based on the shared strategy tables
 - `public/index.html` — initial web app HTML entrypoint
-- `public/styles.css` — responsive design system and application shell styling
-- `public/app.js` — client-side app state, auth flow, dashboard/session/trainer flows, and responsive shortcuts
+- `public/styles.css` — responsive design system, application shell styling, and metadata chip/readout styling
+- `public/app.js` — client-side app state, auth flow, dashboard/session/trainer flows, metadata capture, and responsive shortcuts
 - `design/prototype*.html/jsx` — restored to original prototype behavior after reverting API-coupled experiment
 
 ---
@@ -90,6 +96,7 @@ Test run:         2026-05-14 — integration suite passed with 4 tests / 48 asse
 Docs cleanup:     2026-05-14 — architecture, database, deployment, runbook, and style guide docs rewritten around the real app
 Analytics run:    2026-05-14 — typecheck passed; integration suite passed with 58 assertions after adding period and casino analytics coverage
 Progression run:  2026-05-14 — typecheck passed; integration suite passed with 67 assertions after adding streaks and mistakes review coverage
+Metadata run:     2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; full `bun test` passed with 20 tests / 2897 assertions after fixing the test harness app import. `bun run lint` is blocked because the repo has no ESLint config file.
 ```
 
 ---
@@ -98,13 +105,12 @@ Progression run:  2026-05-14 — typecheck passed; integration suite passed with
 
 **User direction (2026-05-15)**: still in dev phase — finish feature completeness FIRST, then circle back to browser verification, automated UI tests, and the open `/users/me` investigation. The roadmap below is sequenced; ship each slice end-to-end (schema → API → UI → tests → commit) before starting the next.
 
-1. **Slice A — Session metadata** (next): tags, pre/post session mood, completion notes.
-2. **Slice B — Budget ring**: monthly budget setting + dashboard ring + warning state.
-3. **Slice C — Session limits + break mode**: per-session loss/time limits, reflection prompt, break-mode lockout.
-4. **Slice D — Mood × result analytics**: aggregation endpoint + dashboard widget.
-5. **Slice E — Trainer depth**: count drills, deviation drills, difficulty slider.
-6. **Slice F — Profile management**: change password, export, delete account.
-7. **Slice G — Strategy content verification**.
+1. **Slice B — Budget ring** (next): monthly budget setting + dashboard ring + warning state.
+2. **Slice C — Session limits + break mode**: per-session loss/time limits, reflection prompt, break-mode lockout.
+3. **Slice D — Mood × result analytics**: aggregation endpoint + dashboard widget.
+4. **Slice E — Trainer depth**: count drills, deviation drills, difficulty slider.
+5. **Slice F — Profile management**: change password, export, delete account.
+6. **Slice G — Strategy content verification**.
 
 After all slices land:
 - Browser-verify the auth + dashboard UX hardening at 375 / 768 / 1280 px.
@@ -117,6 +123,7 @@ After all slices land:
 ## Important Notes
 
 <!-- Anything the next agent needs to know that isn't captured elsewhere -->
+- Shared skill setup is documented in `SKILLS.md`. `~/.agents/skills` is the canonical shared third-party skill store; `~/.codex/skills/.system` is reserved for Codex system skills.
 - Money remains integer cents everywhere in the API and DB.
 - Strategy scenarios are seeded from the same lookup tables used for runtime evaluation to avoid drift.
 - The user explicitly wants the original prototype/frontend preserved as reference while the real web app is built separately.
