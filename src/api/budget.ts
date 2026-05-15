@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../middleware';
 import { ValidationError } from '../utils/errors';
@@ -13,6 +13,12 @@ import { prisma } from '../database';
 const router = Router();
 router.use(authenticate);
 
+const asyncHandler =
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler =>
+  (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+
 function parseBody<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
   const result = schema.safeParse(body);
   if (!result.success) {
@@ -25,10 +31,10 @@ function parseBody<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T>
   return result.data;
 }
 
-router.get('/me/budget', async (req: Request, res: Response) => {
+router.get('/me/budget', asyncHandler(async (req, res) => {
   const view = await getMonthlyBudgetView(req.userId!);
   res.status(200).json({ data: view });
-});
+}));
 
 const putBudgetSchema = z.object({
   amountCents: z.number().int().min(100, 'Budget must be at least $1'),
@@ -39,7 +45,7 @@ const putBudgetSchema = z.object({
     .transform((v) => (v ? new Date(v) : undefined)),
 });
 
-router.put('/me/budget', async (req: Request, res: Response) => {
+router.put('/me/budget', asyncHandler(async (req, res) => {
   const input = parseBody(putBudgetSchema, req.body);
   const effective = input.effectiveFrom ?? monthStartUtc(new Date());
 
@@ -67,11 +73,11 @@ router.put('/me/budget', async (req: Request, res: Response) => {
 
   const row = await setBudget(req.userId!, input.amountCents, effective);
   res.status(200).json({ data: row });
-});
+}));
 
-router.get('/me/budget/history', async (req: Request, res: Response) => {
+router.get('/me/budget/history', asyncHandler(async (req, res) => {
   const rows = await listBudgetHistory(req.userId!);
   res.status(200).json({ data: rows });
-});
+}));
 
 export default router;
