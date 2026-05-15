@@ -414,6 +414,12 @@ a { color: inherit; }
   margin-top: 16px;
 }
 
+.dashboard-side-stack {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
 /* ── Cards ──────────────────────────────────────────── */
 .stat-card,
 .session-card,
@@ -495,6 +501,102 @@ a { color: inherit; }
 
 .quick-action {
   min-height: 88px;
+}
+
+/* ── Budget ring ────────────────────────────────────── */
+.budget-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.budget-card__head {
+  margin-bottom: 0;
+}
+
+.budget-card__body {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.budget-ring {
+  width: 96px;
+  height: 96px;
+  flex: none;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.32));
+}
+
+.budget-ring__track {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.budget-ring__bar {
+  stroke: var(--gold);
+  transition: stroke-dashoffset 240ms var(--ease-out), stroke 180ms var(--ease-out);
+}
+
+.budget-ring__label {
+  fill: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 500;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.budget-card__figures {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.budget-card__primary {
+  color: var(--ink);
+  font-size: 1.02rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-card__form {
+  gap: 12px;
+}
+
+.budget-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.budget-card__warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(212, 112, 112, 0.28);
+  background: var(--red-soft);
+  color: var(--red);
+  font-weight: 600;
+  font-size: 0.86rem;
+}
+
+.budget-card[data-state="ok"] .budget-ring__bar {
+  stroke: var(--green);
+}
+
+.budget-card[data-state="caution"] .budget-ring__bar {
+  stroke: var(--orange);
+}
+
+.budget-card[data-state="over"] .budget-ring__bar {
+  stroke: var(--red);
+}
+
+.budget-card[data-state="unset"] .budget-ring__bar {
+  stroke: rgba(255, 255, 255, 0.14);
 }
 
 /* ── Session/Hand rows ──────────────────────────────── */

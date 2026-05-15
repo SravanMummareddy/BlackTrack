@@ -6,7 +6,7 @@
 
 We are in development phase. Ship every slice end-to-end (schema → API → UI → seed/tests) before moving on. Polish, automation tests, and browser verification come AFTER feature completeness.
 
-1. **Slice B — Budget ring (responsible play)** (next)
+1. **Slice B — Budget ring (responsible play)** (complete)
    - Monthly budget setting on user profile
    - `% used`, `days left`, `net P/L` computed server-side from sessions in the current month
    - Dashboard ring widget + warning state when nearing/over budget
@@ -48,9 +48,9 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 
 ## Medium Priority
 
-- [ ] **Git checkpoints** — Commit after each completed vertical slice with clear messages
-- [ ] **MD handoff cadence** — Refresh `.shared/context/*.md` and key docs after each milestone
-- [ ] **Budget ring logic** — Monthly budget setting per user; `% used`, `days left`, `net P/L` computed server-side
+- [x] **Git checkpoints** — Current completed vertical slices have clear checkpoint commits
+- [x] **MD handoff cadence** — `.shared/context/*.md` and key docs refreshed after the Slice B milestone
+- [x] **Budget ring logic** — Monthly budget setting per user; `% used`, `days left`, `net P/L` computed server-side
 - [ ] **Mood × result analytics** — Aggregate stored pre/post session mood for dashboard insight
 
 ## Low Priority
@@ -90,7 +90,7 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Overall bankroll stats endpoint
 - [x] Dashboard shell + responsive overview UI in the web app
 - [x] Period-based stats
-- [ ] Budget ring computation
+- [x] Budget ring computation
 - [ ] Mood × result aggregation
 - [x] Per-casino breakdown
 
@@ -103,7 +103,7 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Mistakes queue
 
 ### Phase 5 — Responsible Gambling
-- [ ] Budget settings
+- [x] Budget settings
 - [ ] Session limits
 - [ ] Break mode
 
@@ -129,3 +129,5 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Analytics slice complete: period stats and casino breakdowns added to backend and dashboard — 2026-05-14
 - [x] Strategy progression slice complete: streaks and missed-hand review added to backend and trainer UI — 2026-05-14
 - [x] Session metadata slice complete: tags, pre/post mood, completion notes, API docs, and integration assertions added — 2026-05-15
+- [x] Slice B budget ring complete: monthly budget settings, computed current-month budget view, dashboard ring widget, API docs, unit tests, and integration tests — 2026-05-15
+- [x] Slice B merge handoff complete: shared context refreshed for merge/push and next slice set to session limits + break mode — 2026-05-15

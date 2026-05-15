@@ -274,3 +274,132 @@ describe('API integration', () => {
     expect(progressResponse.body.data.recentMistakes[0].correctAction).toBe(scenarioResponse.body.data.correctAction);
   });
 });
+
+describe('budget', () => {
+  async function registerFreshUser(): Promise<{ token: string; userId: string }> {
+    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const userEmail = `itest_budget_${suffix}@example.com`;
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: userEmail, password: 'StrongPass123', name: 'Budget Tester' });
+    expect(res.status).toBe(201);
+    const token = res.body.data.accessToken as string;
+    const meRes = await request(app)
+      .get('/api/v1/users/me')
+      .set('Authorization', `Bearer ${token}`);
+    expect(meRes.status).toBe(200);
+    return { token, userId: meRes.body.data.id as string };
+  }
+
+  async function seedLosingSession(userId: string, buyIn: number, cashOut: number) {
+    return prisma.casinoSession.create({
+      data: {
+        userId,
+        casinoName: 'Test Casino',
+        tableMin: 2500,
+        tableMax: 20000,
+        decks: 6,
+        buyIn,
+        cashOut,
+        status: 'COMPLETED',
+        endedAt: new Date(),
+      },
+    });
+  }
+
+  test('new user GET returns null budget and numeric daysLeftInMonth', async () => {
+    const { token } = await registerFreshUser();
+    const res = await request(app)
+      .get('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.budgetCents).toBeNull();
+    expect(res.body.data.state).toBeNull();
+    expect(typeof res.body.data.daysLeftInMonth).toBe('number');
+  });
+
+  test('PUT budget then GET reflects budget with state ok and 0% used', async () => {
+    const { token } = await registerFreshUser();
+    const putRes = await request(app)
+      .put('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amountCents: 50000 });
+    expect(putRes.status).toBe(200);
+
+    const getRes = await request(app)
+      .get('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.data.budgetCents).toBe(50000);
+    expect(getRes.body.data.state).toBe('ok');
+    expect(getRes.body.data.percentUsed).toBe(0);
+  });
+
+  test('losing sessions transition state from caution to over', async () => {
+    const { token, userId } = await registerFreshUser();
+    await request(app)
+      .put('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amountCents: 50000 });
+
+    await seedLosingSession(userId, 50000, 10000); // -400 loss
+    let res = await request(app)
+      .get('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.percentUsed).toBe(80);
+    expect(res.body.data.state).toBe('caution');
+
+    await seedLosingSession(userId, 30000, 10000); // -200 additional
+    res = await request(app)
+      .get('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.percentUsed).toBeGreaterThanOrEqual(100);
+    expect(res.body.data.state).toBe('over');
+  });
+
+  test('PUT with amount below minimum returns 400', async () => {
+    const { token } = await registerFreshUser();
+    const res = await request(app)
+      .put('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amountCents: 50 });
+    expect(res.status).toBe(400);
+  });
+
+  test('PUT with non-month-start effectiveFrom returns 400', async () => {
+    const { token } = await registerFreshUser();
+    const res = await request(app)
+      .put('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amountCents: 50000, effectiveFrom: '2026-05-15T00:00:00.000Z' });
+    expect(res.status).toBe(400);
+  });
+
+  test('history returns rows newest first', async () => {
+    const { token } = await registerFreshUser();
+    const a = await request(app)
+      .put('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amountCents: 40000, effectiveFrom: '2026-05-01T00:00:00.000Z' });
+    expect(a.status).toBe(200);
+    const b = await request(app)
+      .put('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amountCents: 60000, effectiveFrom: '2026-06-01T00:00:00.000Z' });
+    expect(b.status).toBe(200);
+
+    const hist = await request(app)
+      .get('/api/v1/users/me/budget/history')
+      .set('Authorization', `Bearer ${token}`);
+    expect(hist.status).toBe(200);
+    expect(Array.isArray(hist.body.data)).toBe(true);
+    expect(hist.body.data.length).toBe(2);
+    const first = new Date(hist.body.data[0].effectiveFrom).getTime();
+    const second = new Date(hist.body.data[1].effectiveFrom).getTime();
+    expect(first).toBeGreaterThan(second);
+    expect(hist.body.data[0].amountCents).toBe(60000);
+    expect(hist.body.data[1].amountCents).toBe(40000);
+  });
+});

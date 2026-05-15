@@ -14,7 +14,7 @@
 | ORM | Prisma + PostgreSQL |
 | Test runner | Bun test |
 | Status | Backend partial + real responsive web app in progress |
-| Last updated | 2026-05-14 |
+| Last updated | 2026-05-15 |
 
 ---
 
@@ -27,6 +27,8 @@
 | claude-mem | Cross-session memory |
 | skill-creator | Custom skill development |
 | frontend-design | UI/component implementation |
+
+Skill installation and shared-vs-system skill layout for this machine are documented in `SKILLS.md`.
 
 ---
 
@@ -67,10 +69,11 @@ Current status of `public/`:
 - trainer progress now includes streaks plus a mistakes review queue with direct scenario reloads
 - dashboard now includes active-session focus, quick actions, and improved desktop/tablet composition
 - dashboard analytics now support period filters and per-casino bankroll breakdowns from `/users/me/stats`
+- dashboard now includes a monthly budget ring backed by `/users/me/budget`, with inline budget save/edit and ok/caution/over states
 - `README.md`, `docs/API.md`, and the core architecture/operations docs now describe the real app
 - baseline API integration coverage now exists in `tests/integration/api.integration.test.ts`
 - core docs now describe the real app instead of generic templates
-- next major slice is deeper product features like tags, mood tracking, responsible-play settings, or more analytics
+- next major slice is session limits plus break mode
 
 ---
 
@@ -92,6 +95,7 @@ Business logic layer. **This is where most BlackStack work happens.**
 - Hand logging and session stats → `hand-service.ts`
 - Basic strategy engine + seed data generation → `strategy-service.ts`
 - Strategy progression now includes streak and mistake-queue computation, and analytics include period filtering plus per-casino breakdowns; deeper bankroll features are still TBD
+- Monthly budget logic lives in `budget-service.ts`, including month math, effective-setting resolution, net-loss aggregation, and state classification
 
 ### `src/database/`
 Prisma singleton + DB health helpers.

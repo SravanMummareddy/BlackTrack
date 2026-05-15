@@ -139,6 +139,32 @@ Use git checkpoints and refresh the handoff markdown after each slice.
 
 ---
 
+## ADR-007: Keep monthly budget as advisory UI before enforcement
+
+**Date**: 2026-05-15
+**Status**: Accepted
+
+### Context
+Slice B introduced monthly budget settings and a dashboard ring that computes current-month net loss against the active budget. The next responsible-play features are session loss/time limits and break mode, which have stronger enforcement semantics.
+
+### Decision
+Treat the monthly budget ring as advisory only for now. It should warn visually when spending approaches or exceeds the budget, but it should not block session creation. Enforcement belongs in the upcoming session limits and break-mode slice.
+
+### Consequences
+- **Positive**: Budget visibility ships without prematurely coupling it to session creation.
+- **Positive**: Slice C can define enforcement behavior once session limits and break-mode state exist.
+- **Negative**: Users can still create sessions while over budget until the enforcement slice lands.
+
+### Alternatives Considered
+- **Block session creation when over monthly budget** — rejected for now because break-mode and limit override behavior need a clearer product model.
+- **Store budget warnings only in the client** — rejected because the server already computes monthly net loss and state consistently.
+
+### Implementation Notes
+- `GET /users/me/budget` remains the source of truth for current-month budget state.
+- Session creation should stay unchanged until Slice C adds explicit limit and break-mode checks.
+
+---
+
 ## ADR-001: Use Prisma as the ORM
 
 **Date**: [DATE]
