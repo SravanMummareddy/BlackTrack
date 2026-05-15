@@ -1,15 +1,31 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { z } from 'zod';
 import { prisma } from '../database';
 import { authenticate } from '../middleware';
-import { ValidationError } from '../utils/errors';
+import { ValidationError, UnauthorizedError, NotFoundError, ConflictError } from '../utils/errors';
 import { schemas } from '../utils/validation';
+import { hashPassword, verifyPassword } from '../auth/passwords';
 
 const router = Router();
+
+const asyncHandler =
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler =>
+  (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
 
 const updateMeSchema = z.object({
   name: schemas.name.optional(),
   email: schemas.email.optional(),
+});
+
+const updatePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: schemas.password,
+});
+
+const deleteAccountSchema = z.object({
+  password: z.string().min(1, 'Password is required'),
 });
 
 const statsQuerySchema = z.object({
@@ -42,15 +58,16 @@ function parseQuery<T extends z.ZodTypeAny>(schema: T, query: unknown): z.infer<
 
 router.use(authenticate);
 
-router.get('/me', async (req: Request, res: Response) => {
-  const user = await prisma.user.findUniqueOrThrow({
+router.get('/me', asyncHandler(async (req: Request, res: Response) => {
+  const user = await prisma.user.findUnique({
     where: { id: req.userId },
     select: { id: true, email: true, name: true, role: true, createdAt: true },
   });
+  if (!user) throw new NotFoundError('User');
   res.status(200).json({ data: user });
-});
+}));
 
-router.patch('/me', async (req: Request, res: Response) => {
+router.patch('/me', asyncHandler(async (req: Request, res: Response) => {
   const input = parseBody(updateMeSchema, req.body);
   const user = await prisma.user.update({
     where: { id: req.userId },
@@ -58,9 +75,81 @@ router.patch('/me', async (req: Request, res: Response) => {
     select: { id: true, email: true, name: true, role: true, createdAt: true },
   });
   res.status(200).json({ data: user });
-});
+}));
 
-router.get('/me/stats', async (req: Request, res: Response) => {
+router.patch('/me/password', asyncHandler(async (req: Request, res: Response) => {
+  const input = parseBody(updatePasswordSchema, req.body);
+  const user = await getPasswordUser(req.userId!);
+  const valid = await verifyPassword(input.currentPassword, user.passwordHash);
+  if (!valid) throw new UnauthorizedError('Current password is incorrect');
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await hashPassword(input.newPassword) },
+  });
+
+  res.status(204).send();
+}));
+
+router.get('/me/export', asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.userId!;
+  const [user, sessions, budgetSettings, strategyAttempts] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        oauthProvider: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.casinoSession.findMany({
+      where: { userId },
+      orderBy: { startedAt: 'desc' },
+      include: {
+        hands: { orderBy: { handNumber: 'asc' } },
+      },
+    }),
+    prisma.budgetSetting.findMany({
+      where: { userId },
+      orderBy: { effectiveFrom: 'desc' },
+    }),
+    prisma.strategyAttempt.findMany({
+      where: { userId },
+      orderBy: { attemptedAt: 'desc' },
+      include: {
+        scenario: true,
+      },
+    }),
+  ]);
+
+  if (!user) throw new NotFoundError('User');
+
+  res.status(200).json({
+    data: {
+      exportedAt: new Date().toISOString(),
+      user,
+      sessions,
+      budgetSettings,
+      strategyAttempts,
+    },
+  });
+}));
+
+router.delete('/me', asyncHandler(async (req: Request, res: Response) => {
+  const input = parseBody(deleteAccountSchema, req.body);
+  const user = await getPasswordUser(req.userId!);
+  const valid = await verifyPassword(input.password, user.passwordHash);
+  if (!valid) throw new UnauthorizedError('Password is incorrect');
+
+  await prisma.user.delete({ where: { id: user.id } });
+  res.status(204).send();
+}));
+
+router.get('/me/stats', asyncHandler(async (req: Request, res: Response) => {
   const userId = req.userId!;
   const { period = 'all' } = parseQuery(statsQuerySchema, req.query);
   const startedAtFilter = getPeriodStart(period);
@@ -132,7 +221,7 @@ router.get('/me/stats', async (req: Request, res: Response) => {
       topCasinos,
     },
   });
-});
+}));
 
 export default router;
 
@@ -151,6 +240,16 @@ function getPeriodStart(period: 'all' | 'year' | 'month' | 'week'): Date | null 
   }
 
   return start;
+}
+
+async function getPasswordUser(userId: string): Promise<{ id: string; passwordHash: string }> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, passwordHash: true },
+  });
+  if (!user) throw new NotFoundError('User');
+  if (!user.passwordHash) throw new ConflictError('Password authentication is not enabled for this account');
+  return { id: user.id, passwordHash: user.passwordHash };
 }
 
 function summarizeCasinoBreakdown(

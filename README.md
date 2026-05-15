@@ -98,6 +98,9 @@ Implemented endpoints:
 - `DELETE /api/v1/sessions/:sessionId/hands/:handId`
 - `GET /api/v1/users/me`
 - `PATCH /api/v1/users/me`
+- `PATCH /api/v1/users/me/password`
+- `GET /api/v1/users/me/export`
+- `DELETE /api/v1/users/me`
 - `GET /api/v1/users/me/stats`
 - `GET /api/v1/strategy/scenarios/random`
 - `POST /api/v1/strategy/attempts`
@@ -122,9 +125,9 @@ Done:
 - trainer workspace
 - responsive dashboard/trainer polish
 - hand/session correction flows with active-session live P/L
+- account lifecycle controls: change password, JSON export, delete account
 
 Still needed:
-- account lifecycle controls
 - strategy content verification
 - responsible-play session limits and break mode
 - deeper analytics and learning content

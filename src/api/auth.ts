@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { z } from 'zod';
 import { rateLimit } from 'express-rate-limit';
 import * as authService from '../services/auth-service';
@@ -7,6 +7,12 @@ import { ValidationError } from '../utils/errors';
 import { schemas } from '../utils/validation';
 
 const router = Router();
+
+const asyncHandler =
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler =>
+  (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -45,27 +51,27 @@ function parseBody<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T>
   return result.data;
 }
 
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', asyncHandler(async (req: Request, res: Response) => {
   const { email, name, password } = parseBody(registerSchema, req.body);
   const tokens = await authService.register(email, name, password);
   res.status(201).json({ data: tokens });
-});
+}));
 
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = parseBody(loginSchema, req.body);
   const tokens = await authService.login(email, password);
   res.status(200).json({ data: tokens });
-});
+}));
 
-router.post('/refresh', async (req: Request, res: Response) => {
+router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
   const { refreshToken } = parseBody(refreshSchema, req.body);
   const tokens = await authService.refreshTokens(refreshToken);
   res.status(200).json({ data: tokens });
-});
+}));
 
-router.post('/logout', authenticate, async (req: Request, res: Response) => {
+router.post('/logout', authenticate, asyncHandler(async (req: Request, res: Response) => {
   await authService.logout(req.userId!);
   res.status(204).send();
-});
+}));
 
 export default router;

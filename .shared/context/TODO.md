@@ -14,7 +14,7 @@ We are in development phase. Ship every slice end-to-end (schema → API → UI 
    - Edit and delete hand logs
    - Edit, delete, and reopen sessions
    - Active-session live P/L computed from logged hand payouts
-3. **Slice C1 — Account lifecycle**
+3. **Slice C1 — Account lifecycle** (complete)
    - Change password
    - Export account/session/hand/trainer data as JSON
    - Delete account with cascade cleanup
@@ -51,7 +51,7 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] **Strategy progression features** — Streaks and review resurfacing
 - [x] **Session metadata** — Tags, pre/post session mood, and completion notes in API + web app
 - [x] **Baseline correction features** — Edit/delete hands, edit/delete/reopen sessions, and show active-session live P/L
-- [ ] **Account lifecycle** — Change password, export JSON, and delete account
+- [x] **Account lifecycle** — Change password, export JSON, and delete account
 - [ ] **Strategy content verification** — Confirm seeded scenarios and evaluator outputs against a reference basic-strategy chart
 - [x] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
 - [x] **Docs template cleanup** — Rewrite architecture, database, deployment, runbook, and style-guide docs around the real app
@@ -146,3 +146,4 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Slice B budget ring complete: monthly budget settings, computed current-month budget view, dashboard ring widget, API docs, unit tests, and integration tests — 2026-05-15
 - [x] Slice B merge handoff complete: shared context refreshed for merge/push and next slice set to session limits + break mode — 2026-05-15
 - [x] Slice C0 baseline correction complete: hand edit/delete, session edit/delete/reopen, live active-session P/L, API docs, and integration coverage — 2026-05-15
+- [x] Slice C1 account lifecycle complete: password change, credential-safe JSON export, delete account cascade, profile UI controls, API docs, and integration coverage — 2026-05-15

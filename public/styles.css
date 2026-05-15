@@ -711,6 +711,16 @@ button.session-row {
   box-shadow: 0 4px 18px rgba(212, 175, 106, 0.32), inset 0 1px 0 rgba(255,255,255,0.25);
 }
 
+.primary-btn.danger-btn {
+  background: linear-gradient(145deg, #e08383 0%, var(--red) 100%);
+  color: #220909;
+  box-shadow: 0 2px 10px rgba(212, 112, 112, 0.2), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+.primary-btn.danger-btn:hover:not(:disabled) {
+  background: linear-gradient(145deg, #f09a9a 0%, #d47070 100%);
+}
+
 .primary-btn:disabled {
   opacity: 0.38;
   cursor: not-allowed;

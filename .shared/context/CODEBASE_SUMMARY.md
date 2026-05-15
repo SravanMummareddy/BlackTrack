@@ -71,10 +71,11 @@ Current status of `public/`:
 - dashboard now includes active-session focus, quick actions, and improved desktop/tablet composition
 - dashboard analytics now support period filters and per-casino bankroll breakdowns from `/users/me/stats`
 - dashboard now includes a monthly budget ring backed by `/users/me/budget`, with inline budget save/edit and ok/caution/over states
+- profile/account management now supports password changes, credential-safe JSON export, and password-confirmed account deletion
 - `README.md`, `docs/API.md`, and the core architecture/operations docs now describe the real app
 - baseline API integration coverage now exists in `tests/integration/api.integration.test.ts`
 - core docs now describe the real app instead of generic templates
-- next major slice is C1 account lifecycle controls before responsible-play enhancements
+- next major slice is C2 strategy content verification before responsible-play enhancements
 
 ---
 

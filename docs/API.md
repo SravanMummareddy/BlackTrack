@@ -184,6 +184,74 @@ Request:
 
 Response `200`: same shape as `GET /users/me`.
 
+### `PATCH /users/me/password`
+
+Changes the password for a password-based account. OAuth-only accounts return `409` because password authentication is not enabled.
+
+Request:
+
+```json
+{
+  "currentPassword": "StrongPass123!",
+  "newPassword": "NewStrong123!"
+}
+```
+
+Validation:
+
+- `currentPassword` is required and must match the current password.
+- `newPassword` must be at least 8 characters and include uppercase, lowercase, and a number.
+
+Response `204` with no body.
+
+### `GET /users/me/export`
+
+Returns a JSON export of the authenticated user's account data. Credential fields such as `passwordHash` are never included.
+
+Response `200`:
+
+```json
+{
+  "data": {
+    "exportedAt": "2026-05-15T20:00:00.000Z",
+    "user": {
+      "id": "uuid",
+      "email": "player@example.com",
+      "name": "Blackjack Player",
+      "role": "USER",
+      "oauthProvider": null,
+      "createdAt": "2026-05-14T20:00:00.000Z",
+      "updatedAt": "2026-05-15T20:00:00.000Z"
+    },
+    "sessions": [
+      {
+        "id": "uuid",
+        "casinoName": "Bellagio",
+        "hands": []
+      }
+    ],
+    "budgetSettings": [],
+    "strategyAttempts": []
+  }
+}
+```
+
+`sessions` include nested `hands`; `strategyAttempts` include the related strategy scenario.
+
+### `DELETE /users/me`
+
+Deletes the authenticated user and cascades account-owned data including sessions, hands, budget settings, and strategy attempts.
+
+Request:
+
+```json
+{
+  "password": "StrongPass123!"
+}
+```
+
+Response `204` with no body. Existing JWTs become unusable because the user record no longer exists.
+
 ### `GET /users/me/stats`
 
 Returns account-level bankroll and hand summary values.

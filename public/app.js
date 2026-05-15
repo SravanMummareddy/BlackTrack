@@ -810,7 +810,10 @@ function renderProfileView() {
             <h2>Profile</h2>
             <p>Identity, bankroll summary, and the current account-level API data.</p>
           </div>
-          <button class="ghost-btn" data-action="open-modal" data-modal="profile-edit">Edit profile</button>
+          <div class="toolbar">
+            <button class="ghost-btn" data-action="open-modal" data-modal="profile-edit">Edit profile</button>
+            <button class="ghost-btn" data-action="open-modal" data-modal="password-change">Change password</button>
+          </div>
         </div>
         <div class="detail-grid">
           ${renderDetailStat("Name", escapeHtml(state.user?.name ?? "—"))}
@@ -831,6 +834,18 @@ function renderProfileView() {
           ${renderDetailStat("Completed Buy-In", formatMoney(state.stats?.completedBuyIn))}
           ${renderDetailStat("Total Cash-Out", formatMoney(state.stats?.totalCashOut))}
           ${renderDetailStat("Hands Won", formatCount(state.stats?.handsWon))}
+        </div>
+      </article>
+      <article class="profile-card">
+        <div class="section-head">
+          <div>
+            <h2>Account Controls</h2>
+            <p>Export a complete JSON copy or permanently remove this account.</p>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button class="ghost-btn" data-action="export-account">Export JSON</button>
+          <button class="subtle-btn danger" data-action="open-modal" data-modal="account-delete">Delete account</button>
         </div>
       </article>
     </section>
@@ -1042,6 +1057,8 @@ function renderModals() {
     ${renderModal("hand-log", "Log a Hand", "Capture bet sizing, outcome, cards, and payout in cents.", renderHandForm())}
     ${renderModal("hand-edit", "Edit Hand", "Correct a logged hand and refresh session totals.", renderHandForm(getEditingHand(), "edit-hand", "hand-edit"))}
     ${renderModal("profile-edit", "Edit Profile", "Update the basics tied to your account.", renderProfileForm())}
+    ${renderModal("password-change", "Change Password", "Confirm the current password before setting a new one.", renderPasswordForm())}
+    ${renderModal("account-delete", "Delete Account", "This permanently removes profile, sessions, hands, budgets, and trainer progress.", renderDeleteAccountForm())}
   `;
 }
 
@@ -1278,6 +1295,46 @@ function renderProfileForm() {
         </div>
       </div>
       <button class="primary-btn" type="submit">Save profile</button>
+    </form>
+  `;
+}
+
+function renderPasswordForm() {
+  return `
+    <form class="surface-form" data-form="change-password">
+      <div class="field">
+        <label for="password-current">Current Password</label>
+        <input id="password-current" name="currentPassword" type="password" autocomplete="current-password" required />
+        <span class="field-error" data-error-for="currentPassword"></span>
+      </div>
+      <div class="field">
+        <label for="password-new">New Password</label>
+        <input id="password-new" name="newPassword" type="password" autocomplete="new-password" required />
+        <span class="field-error" data-error-for="newPassword"></span>
+      </div>
+      <div class="field">
+        <label for="password-confirm">Confirm New Password</label>
+        <input id="password-confirm" name="confirmPassword" type="password" autocomplete="new-password" required />
+        <span class="field-error" data-error-for="confirmPassword"></span>
+      </div>
+      <button class="primary-btn" type="submit">Change password</button>
+    </form>
+  `;
+}
+
+function renderDeleteAccountForm() {
+  return `
+    <form class="surface-form" data-form="delete-account">
+      <div class="feedback error">
+        <strong>Permanent deletion</strong>
+        <p>This removes your profile, sessions, hands, budget settings, and trainer progress. Export JSON first if you need a copy.</p>
+      </div>
+      <div class="field">
+        <label for="delete-password">Password</label>
+        <input id="delete-password" name="password" type="password" autocomplete="current-password" required />
+        <span class="field-error" data-error-for="password"></span>
+      </div>
+      <button class="primary-btn danger-btn" type="submit">Delete account</button>
     </form>
   `;
 }
@@ -1521,6 +1578,11 @@ async function onActionClick(event) {
     return;
   }
 
+  if (action === "export-account") {
+    await exportAccountData();
+    return;
+  }
+
   if (action === "new-scenario") {
     await loadTrainerScenario();
     return;
@@ -1598,6 +1660,18 @@ async function onFormSubmit(event) {
     if (formName === "update-profile") {
       await updateProfile(formData);
       closeModal("profile-edit");
+      return;
+    }
+
+    if (formName === "change-password") {
+      await changePassword(formData);
+      closeModal("password-change");
+      return;
+    }
+
+    if (formName === "delete-account") {
+      await deleteAccount(formData);
+      closeModal("account-delete");
       return;
     }
 
@@ -1990,6 +2064,81 @@ async function updateProfile(formData) {
 
   state.user = user;
   addNotice("Profile updated.", "success");
+  render();
+}
+
+async function changePassword(formData) {
+  const form = document.querySelector('form[data-form="change-password"]');
+  const currentPassword = String(formData.get("currentPassword") || "");
+  const newPassword = String(formData.get("newPassword") || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
+
+  if (!currentPassword) {
+    if (form) setFieldError(form, "currentPassword", "Current password is required.");
+    throw new Error("Current password is required.");
+  }
+  if (!PASSWORD_RULES.every((rule) => rule.test(newPassword))) {
+    if (form) setFieldError(form, "newPassword", "Use at least 8 characters with uppercase, lowercase, and a number.");
+    throw new Error("New password does not meet the password rules.");
+  }
+  if (newPassword !== confirmPassword) {
+    if (form) setFieldError(form, "confirmPassword", "Passwords do not match.");
+    throw new Error("Passwords do not match.");
+  }
+
+  await api("/users/me/password", {
+    method: "PATCH",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+
+  addNotice("Password changed.", "success");
+}
+
+async function exportAccountData() {
+  const data = await api("/users/me/export");
+  const exportedAt = data.exportedAt ? data.exportedAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `blackstack-export-${exportedAt}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  addNotice("Account export downloaded.", "success");
+}
+
+async function deleteAccount(formData) {
+  const form = document.querySelector('form[data-form="delete-account"]');
+  const password = String(formData.get("password") || "");
+  if (!password) {
+    if (form) setFieldError(form, "password", "Password is required.");
+    throw new Error("Password is required.");
+  }
+  if (!window.confirm("Delete your BlackStack account permanently?")) return;
+
+  await api("/users/me", {
+    method: "DELETE",
+    body: JSON.stringify({ password }),
+  });
+
+  clearTokens();
+  state.user = null;
+  state.stats = null;
+  state.budget = null;
+  state.budgetFormOpen = false;
+  state.sessions = [];
+  state.selectedSessionId = null;
+  state.selectedSession = null;
+  state.sessionHands = [];
+  state.sessionStats = null;
+  state.trainerProgress = null;
+  state.trainerScenario = null;
+  state.trainerFeedback = null;
+  state.currentView = "dashboard";
+  state.authMode = "login";
+  addNotice("Account deleted.", "success");
   render();
 }
 

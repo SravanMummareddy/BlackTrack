@@ -41,6 +41,7 @@ Current capabilities:
 - correct session details and hand logs after entry mistakes
 - compute active-session live P/L from hand payouts
 - compute session and user bankroll stats
+- change password, export account data, and delete an account with cascading cleanup
 
 ### Learn
 

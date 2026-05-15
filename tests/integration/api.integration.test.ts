@@ -15,7 +15,7 @@ let app: AppModule['app'];
 let prisma: DatabaseModule['prisma'];
 let buildScenarioSeedData: StrategyServiceModule['buildScenarioSeedData'];
 
-const testRunId = `itest_${Date.now()}`;
+const testRunId = `itest_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 const email = `${testRunId}@example.com`;
 const password = 'StrongPass123';
 const name = 'Integration Tester';
@@ -544,5 +544,148 @@ describe('correction flows', () => {
       .get(`/api/v1/sessions/${correctionSessionId}`)
       .set('Authorization', `Bearer ${token}`);
     expect(getDeletedRes.status).toBe(404);
+  });
+});
+
+describe('account lifecycle', () => {
+  async function registerAccountUser(): Promise<{ token: string; email: string; password: string }> {
+    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const userEmail = `itest_account_${suffix}@example.com`;
+    const userPassword = 'StrongPass123';
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: userEmail, password: userPassword, name: 'Account Tester' });
+    expect(res.status).toBe(201);
+    return { token: res.body.data.accessToken as string, email: userEmail, password: userPassword };
+  }
+
+  async function seedAccountData(token: string): Promise<{ sessionId: string }> {
+    const sessionRes = await request(app)
+      .post('/api/v1/sessions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        casinoName: 'Cosmopolitan',
+        tableMin: 2500,
+        tableMax: 20000,
+        decks: 6,
+        buyIn: 30000,
+      });
+    expect(sessionRes.status).toBe(201);
+    const accountSessionId = sessionRes.body.data.id as string;
+
+    const handRes = await request(app)
+      .post(`/api/v1/sessions/${accountSessionId}/hands`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        bet: 2500,
+        result: 'WIN',
+        playerCards: ['A', 'K'],
+        dealerCards: ['9', '7'],
+        playerTotal: 21,
+        dealerTotal: 16,
+        payout: 3750,
+      });
+    expect(handRes.status).toBe(201);
+
+    const budgetRes = await request(app)
+      .put('/api/v1/users/me/budget')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amountCents: 50000 });
+    expect(budgetRes.status).toBe(200);
+
+    const scenarioRes = await request(app)
+      .get('/api/v1/strategy/scenarios/random')
+      .set('Authorization', `Bearer ${token}`);
+    expect(scenarioRes.status).toBe(200);
+
+    const attemptRes = await request(app)
+      .post('/api/v1/strategy/attempts')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        scenarioId: scenarioRes.body.data.id,
+        action: scenarioRes.body.data.correctAction,
+        timeMs: 900,
+      });
+    expect(attemptRes.status).toBe(201);
+
+    return { sessionId: accountSessionId };
+  }
+
+  test('password change requires the current password and allows login with the new password', async () => {
+    const { token, email: accountEmail, password: accountPassword } = await registerAccountUser();
+
+    const wrongCurrentRes = await request(app)
+      .patch('/api/v1/users/me/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ currentPassword: 'WrongPass123', newPassword: 'NewStrong123' });
+    expect(wrongCurrentRes.status).toBe(401);
+
+    const changeRes = await request(app)
+      .patch('/api/v1/users/me/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ currentPassword: accountPassword, newPassword: 'NewStrong123' });
+    expect(changeRes.status).toBe(204);
+
+    const oldLoginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: accountEmail, password: accountPassword });
+    expect(oldLoginRes.status).toBe(401);
+
+    const newLoginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: accountEmail, password: 'NewStrong123' });
+    expect(newLoginRes.status).toBe(200);
+    expect(newLoginRes.body.data.accessToken).toBeString();
+  });
+
+  test('export returns account data without credential fields', async () => {
+    const { token, email: accountEmail } = await registerAccountUser();
+    const { sessionId: accountSessionId } = await seedAccountData(token);
+
+    const exportRes = await request(app)
+      .get('/api/v1/users/me/export')
+      .set('Authorization', `Bearer ${token}`);
+    expect(exportRes.status).toBe(200);
+    expect(exportRes.body.data.exportedAt).toBeString();
+    expect(exportRes.body.data.user.email).toBe(accountEmail);
+    expect(exportRes.body.data.user.passwordHash).toBeUndefined();
+    expect(exportRes.body.data.sessions.some((session: { id: string }) => session.id === accountSessionId)).toBe(true);
+    const exportedSession = exportRes.body.data.sessions.find((session: { id: string }) => session.id === accountSessionId);
+    expect(exportedSession.hands).toHaveLength(1);
+    expect(exportRes.body.data.budgetSettings.length).toBeGreaterThanOrEqual(1);
+    expect(exportRes.body.data.strategyAttempts.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('delete account requires password and cascades private data', async () => {
+    const { token, email: accountEmail, password: accountPassword } = await registerAccountUser();
+    await seedAccountData(token);
+
+    const badDeleteRes = await request(app)
+      .delete('/api/v1/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'WrongPass123' });
+    expect(badDeleteRes.status).toBe(401);
+
+    const deleteRes = await request(app)
+      .delete('/api/v1/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: accountPassword });
+    expect(deleteRes.status).toBe(204);
+
+    const meRes = await request(app)
+      .get('/api/v1/users/me')
+      .set('Authorization', `Bearer ${token}`);
+    expect(meRes.status).toBe(404);
+
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: accountEmail, password: accountPassword });
+    expect(loginRes.status).toBe(401);
+
+    const deletedRows = await prisma.user.findMany({
+      where: { email: accountEmail },
+      include: { sessions: true, strategyAttempts: true, budgetSettings: true },
+    });
+    expect(deletedRows).toHaveLength(0);
   });
 });
