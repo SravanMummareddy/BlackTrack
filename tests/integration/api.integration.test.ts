@@ -688,4 +688,125 @@ describe('account lifecycle', () => {
     });
     expect(deletedRows).toHaveLength(0);
   });
+
+  test('session limits surface live limit state; break mode blocks new sessions', async () => {
+    const limitsEmail = `itest_limits_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@example.com`;
+    const limitsPassword = 'StrongPass123';
+
+    const reg = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: limitsEmail, password: limitsPassword, name: 'Limits Tester' });
+    expect(reg.status).toBe(201);
+    const token = reg.body.data.accessToken;
+
+    // Create session with both limits.
+    const create = await request(app)
+      .post('/api/v1/sessions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        casinoName: 'Aria',
+        tableMin: 2500,
+        tableMax: 20000,
+        buyIn: 30000,
+        lossLimitCents: 5000,
+        timeLimitMinutes: 120,
+      });
+    expect(create.status).toBe(201);
+    expect(create.body.data.lossLimitCents).toBe(5000);
+    expect(create.body.data.timeLimitMinutes).toBe(120);
+    expect(create.body.data.limitState).toMatchObject({
+      lossLimitCents: 5000,
+      timeLimitMinutes: 120,
+      lossLimitHit: false,
+      timeLimitHit: false,
+      anyLimitHit: false,
+    });
+    const limitedSessionId = create.body.data.id;
+
+    // Log a hand that pushes net loss to the cap.
+    const handRes = await request(app)
+      .post(`/api/v1/sessions/${limitedSessionId}/hands`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        handNumber: 1,
+        bet: 5000,
+        result: 'LOSS',
+        playerCards: ['10', '8'],
+        dealerCards: ['10', '9'],
+        playerTotal: 18,
+        dealerTotal: 19,
+        payout: -5000,
+      });
+    expect(handRes.status).toBe(201);
+
+    const after = await request(app)
+      .get(`/api/v1/sessions/${limitedSessionId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(after.status).toBe(200);
+    expect(after.body.data.limitState.netLossCents).toBe(5000);
+    expect(after.body.data.limitState.lossLimitHit).toBe(true);
+    expect(after.body.data.limitState.anyLimitHit).toBe(true);
+
+    // "Extend" the limit by patching it higher — limit state clears.
+    const extend = await request(app)
+      .patch(`/api/v1/sessions/${limitedSessionId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ lossLimitCents: 20000 });
+    expect(extend.status).toBe(200);
+    expect(extend.body.data.limitState.lossLimitHit).toBe(false);
+
+    // Break mode — initially inactive.
+    const breakBefore = await request(app)
+      .get('/api/v1/users/me/break')
+      .set('Authorization', `Bearer ${token}`);
+    expect(breakBefore.status).toBe(200);
+    expect(breakBefore.body.data.active).toBe(false);
+    expect(breakBefore.body.data.breakUntil).toBeNull();
+
+    // Set a 24h break.
+    const setBreak = await request(app)
+      .put('/api/v1/users/me/break')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ duration: '24h' });
+    expect(setBreak.status).toBe(200);
+    expect(setBreak.body.data.active).toBe(true);
+    expect(typeof setBreak.body.data.breakUntil).toBe('string');
+
+    // New session creation is now blocked.
+    const blocked = await request(app)
+      .post('/api/v1/sessions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        casinoName: 'Aria',
+        tableMin: 2500,
+        tableMax: 20000,
+        buyIn: 30000,
+      });
+    expect(blocked.status).toBe(403);
+
+    // Clearing the break re-enables session creation.
+    const clearBreak = await request(app)
+      .delete('/api/v1/users/me/break')
+      .set('Authorization', `Bearer ${token}`);
+    expect(clearBreak.status).toBe(200);
+    expect(clearBreak.body.data.active).toBe(false);
+
+    const unblocked = await request(app)
+      .post('/api/v1/sessions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        casinoName: 'Aria',
+        tableMin: 2500,
+        tableMax: 20000,
+        buyIn: 30000,
+      });
+    expect(unblocked.status).toBe(201);
+
+    // Invalid duration rejected.
+    const badBreak = await request(app)
+      .put('/api/v1/users/me/break')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ duration: '1h' });
+    expect(badBreak.status).toBe(400);
+  });
 });

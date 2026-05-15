@@ -23,10 +23,11 @@ We are in development phase. Ship every slice end-to-end (schema → API → UI 
    - Every seeded scenario asserted cell-by-cell vs the reference (350 cells)
    - Named high-risk hard/soft/pair decisions covered as focused tests
    - Evaluator agrees end-to-end with reference for every seed scenario
-5. **Slice C — Session limits + break mode**
-   - Per-session loss limit, time limit (set at session create)
-   - Reflection prompt when limits are hit; option to end or extend
-   - 24h / 7d / 30d break mode that blocks new session creation
+5. **Slice C — Session limits + break mode** (complete — API/service)
+   - `lossLimitCents` + `timeLimitMinutes` set on session create, patchable later
+   - Computed `limitState` returned on every session payload (drives reflection prompt client-side)
+   - `GET/PUT/DELETE /users/me/break` with 24h / 7d / 30d durations; `breakUntil` blocks new session creation (403)
+   - Unit + integration coverage added; UI surface not yet wired
 6. **Slice D — Mood × result analytics**
    - Aggregation endpoint returning sessions grouped by mood bucket with net P/L and win rate
    - Dashboard scatter / grouped-bar widget
@@ -72,8 +73,8 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [ ] **Quiz system** — Scored quizzes linked to lesson content
 - [ ] **Lessons content** — Structured course outline for blackjack fundamentals
 - [ ] **Mistakes queue** — Trainer wrong answers feed a review queue; resurface spaced-repetition style
-- [ ] **Responsible gambling limits** — Per-session loss/time limit settings with reflection prompt trigger
-- [ ] **Break mode** — 24h / 7d / 30d breaks stored and enforced on session creation
+- [x] **Responsible gambling limits** — Per-session loss/time limit settings with reflection prompt trigger (API/service)
+- [x] **Break mode** — 24h / 7d / 30d breaks stored and enforced on session creation (API/service)
 
 ---
 
@@ -120,8 +121,8 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 
 ### Phase 5 — Responsible Gambling
 - [x] Budget settings
-- [ ] Session limits
-- [ ] Break mode
+- [x] Session limits (API/service)
+- [x] Break mode (API/service)
 
 ---
 
@@ -150,3 +151,4 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Slice C0 baseline correction complete: hand edit/delete, session edit/delete/reopen, live active-session P/L, API docs, and integration coverage — 2026-05-15
 - [x] Slice C1 account lifecycle complete: password change, credential-safe JSON export, delete account cascade, profile UI controls, API docs, and integration coverage — 2026-05-15
 - [x] Slice C2 strategy content verification complete: independent reference chart, 350-cell coverage, high-risk decision suite, evaluator agreement — 2026-05-15
+- [x] Slice C session limits + break mode complete (API/service): per-session loss/time limits, computed limitState, 24h/7d/30d break blocking session creation, unit + integration coverage — 2026-05-15
