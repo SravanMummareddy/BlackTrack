@@ -66,7 +66,8 @@ Design exploration is complete and the backend is partially operational. Three p
 
 | Blocker | Impact | Owner | Notes |
 |---|---|---|---|
-| No active blockers | Low | — | Main constraint is scope; work should proceed in smaller chunks with checkpoints |
+| Handoff script exits nonzero | Medium | Next tooling slice | `bun run handoff` runs tests successfully with DB access, but still reports unrelated local files, `tsc --silent` unsupported by the installed TypeScript CLI, missing ESLint config, and a schema-validation warning. |
+| Product scope | Low | Next feature slice | Main constraint is scope; work should proceed in smaller chunks with checkpoints. |
 
 ---
 
@@ -105,6 +106,7 @@ Progression run:  2026-05-14 — typecheck passed; integration suite passed with
 Metadata run:     2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; full `bun test` passed with 20 tests / 2897 assertions after fixing the test harness app import. `bun run lint` is blocked because the repo has no ESLint config file.
 Budget run:       2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; `bun test tests/unit/budget-service.test.ts` passed; `bun test tests/integration/api.integration.test.ts` passed with 10 tests / 109 assertions.
 Merge run:        2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; full `bun test` passed with 44 tests / 2957 assertions. `bun run lint` remains blocked because ESLint has no repo config file.
+Handoff run:      2026-05-15 — `bun run handoff` was rerun with DB access; its test phase passed, but the script exited 1 because of unrelated dirty files, `tsc --silent`, missing ESLint config, and schema-validation warnings.
 ```
 
 ---
