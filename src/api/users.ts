@@ -16,7 +16,7 @@ const statsQuerySchema = z.object({
   period: z.enum(['all', 'year', 'month', 'week']).default('all'),
 });
 
-function parseBody<T>(schema: z.ZodType<T>, body: unknown): T {
+function parseBody<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
   const result = schema.safeParse(body);
   if (!result.success) {
     const fieldErrors = result.error.flatten().fieldErrors as Record<string, string[] | undefined>;
@@ -28,7 +28,7 @@ function parseBody<T>(schema: z.ZodType<T>, body: unknown): T {
   return result.data;
 }
 
-function parseQuery<T>(schema: z.ZodType<T>, query: unknown): T {
+function parseQuery<T extends z.ZodTypeAny>(schema: T, query: unknown): z.infer<T> {
   const result = schema.safeParse(query);
   if (!result.success) {
     const fieldErrors = result.error.flatten().fieldErrors as Record<string, string[] | undefined>;

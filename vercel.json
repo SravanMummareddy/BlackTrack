@@ -1,7 +1,14 @@
 {
-  "buildCommand": "prisma generate && tsc --project tsconfig.json",
-  "outputDirectory": "dist",
-  "installCommand": "bun install",
-  "framework": null,
-  "nodeVersion": "20.x"
+  "version": 2,
+  "functions": {
+    "api/index.ts": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
 }

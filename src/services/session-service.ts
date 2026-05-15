@@ -1,5 +1,6 @@
 import { prisma } from '../database';
 import { NotFoundError, ForbiddenError } from '../utils/errors';
+import { Prisma } from '@prisma/client';
 import type { CasinoSession, SessionStatus } from '@prisma/client';
 
 export interface CreateSessionInput {
@@ -37,18 +38,20 @@ export async function createSession(
   userId: string,
   input: CreateSessionInput
 ): Promise<CasinoSession> {
+  const data: Prisma.CasinoSessionUncheckedCreateInput = {
+    userId,
+    casinoName: input.casinoName,
+    tableMin: input.tableMin,
+    tableMax: input.tableMax,
+    decks: input.decks ?? 6,
+    buyIn: input.buyIn,
+    notes: input.notes,
+    tags: input.tags ?? [],
+    moodStart: input.moodStart,
+  };
+
   return prisma.casinoSession.create({
-    data: {
-      userId,
-      casinoName: input.casinoName,
-      tableMin: input.tableMin,
-      tableMax: input.tableMax,
-      decks: input.decks ?? 6,
-      buyIn: input.buyIn,
-      notes: input.notes,
-      tags: input.tags ?? [],
-      moodStart: input.moodStart,
-    },
+    data,
   });
 }
 
@@ -98,7 +101,7 @@ export async function updateSession(
 ): Promise<CasinoSession> {
   const existing = await getSession(userId, sessionId);
 
-  const data: Record<string, unknown> = {};
+  const data: Prisma.CasinoSessionUpdateInput = {};
   if (input.casinoName !== undefined) data.casinoName = input.casinoName;
   if (input.notes !== undefined) data.notes = input.notes;
   if (input.cashOut !== undefined) data.cashOut = input.cashOut;
