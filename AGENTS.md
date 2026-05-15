@@ -13,6 +13,22 @@ All agents working in this repo have access to these Claude Code plugins:
 | **claude-mem** | Cross-session persistent memory | `/claude-mem:learn-codebase`, `/claude-mem:mem-search` |
 | **skill-creator** | Build new project-specific skills | `/skill-creator:skill-creator` |
 | **frontend-design** | UI component and design system work | `/frontend-design:frontend-design` |
+| **design skills (gstack)** | Senior UI/UX taste and execution layer for any visual work | `/impeccable`, `/emil-design-eng`, `/stitch-design-taste`, `/design-taste-frontend`, `/high-end-visual-design`, `/minimalist-ui`, `/industrial-brutalist-ui`, `/redesign-existing-projects`, `/image-to-code`, `/imagegen-frontend-web`, `/imagegen-frontend-mobile`, `/brandkit`, `/gpt-taste`, `/full-output-enforcement`, `/find-skills` |
+
+### UI / UX routing
+
+For any frontend task that touches `public/` or `design/`, route through a design skill BEFORE editing:
+
+| Trigger | Skill |
+|---|---|
+| Critique, polish, or audit an existing screen | `/impeccable` |
+| Redesign an existing screen or flow | `/redesign-existing-projects` |
+| Design-engineering execution (component-level) | `/emil-design-eng` or `/design-taste-frontend` |
+| Generate or evolve a DESIGN.md / design system | `/stitch-design-taste` or `/design-consultation` |
+| Pick an aesthetic direction | `/high-end-visual-design`, `/minimalist-ui`, `/industrial-brutalist-ui` |
+| Convert a screenshot or mock to code | `/image-to-code` |
+| Generate concept imagery before coding | `/imagegen-frontend-web`, `/imagegen-frontend-mobile` |
+| Investigate UI bugs (e.g. login hidden on mobile, stuck loading state) | `/investigate` first, then a design skill for the visual fix |
 
 ---
 

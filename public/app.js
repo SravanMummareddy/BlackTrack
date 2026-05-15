@@ -1,8 +1,16 @@
 const API_BASE = "/api/v1";
 const TOKEN_KEY = "blackstack.auth.tokens";
 
+const PASSWORD_RULES = [
+  { id: "len", label: "At least 8 characters", test: (p) => p.length >= 8 },
+  { id: "upper", label: "One uppercase letter (A-Z)", test: (p) => /[A-Z]/.test(p) },
+  { id: "lower", label: "One lowercase letter (a-z)", test: (p) => /[a-z]/.test(p) },
+  { id: "digit", label: "One number (0-9)", test: (p) => /\d/.test(p) },
+];
+
 const state = {
   authMode: "login",
+  guestMode: false,
   tokens: loadTokens(),
   user: null,
   stats: null,
@@ -110,36 +118,37 @@ async function hydrateApp() {
     return;
   }
 
-  await Promise.all([
-    loadUserStats(state.statsPeriod, false).catch(() => {
-      state.stats = null;
-    }),
-    api("/sessions").then((sessions) => {
-      state.sessions = sessions.data;
-      state.selectedSessionId = state.sessions[0]?.id ?? null;
-      if (state.selectedSessionId) {
-        return loadSessionDetails(state.selectedSessionId);
-      } else {
+  try {
+    await Promise.all([
+      loadUserStats(state.statsPeriod, false).catch(() => {
+        state.stats = null;
+      }),
+      api("/sessions").then((sessions) => {
+        state.sessions = sessions?.data ?? [];
+        state.selectedSessionId = state.sessions[0]?.id ?? null;
+        if (state.selectedSessionId) {
+          return loadSessionDetails(state.selectedSessionId);
+        }
         state.selectedSession = null;
         state.sessionHands = [];
         state.sessionStats = null;
-      }
-    }).catch(() => {
-      state.sessions = [];
-      state.selectedSessionId = null;
-      state.selectedSession = null;
-      state.sessionHands = [];
-      state.sessionStats = null;
-    }),
-    api("/strategy/progress").then((progress) => {
-      state.trainerProgress = progress;
-    }).catch(() => {
-      state.trainerProgress = null;
-    }),
-  ]);
-
-  state.loading.app = false;
-  render();
+      }).catch(() => {
+        state.sessions = [];
+        state.selectedSessionId = null;
+        state.selectedSession = null;
+        state.sessionHands = [];
+        state.sessionStats = null;
+      }),
+      api("/strategy/progress").then((progress) => {
+        state.trainerProgress = progress;
+      }).catch(() => {
+        state.trainerProgress = null;
+      }),
+    ]);
+  } finally {
+    state.loading.app = false;
+    render();
+  }
 }
 
 async function loadSessionDetails(sessionId) {
@@ -178,14 +187,17 @@ function render() {
           </div>
         </div>
         <div class="topbar-actions">
-          ${state.user ? `<span class="pill gold">${escapeHtml(state.user.name)}</span>` : `<span class="pill">Guest</span>`}
-          ${state.user ? `<button class="ghost-btn" data-action="logout">Log out</button>` : `<button class="primary-btn" data-action="focus-auth">Get started</button>`}
+          ${state.user
+            ? `<span class="pill gold">${escapeHtml(state.user.name)}</span><button class="ghost-btn" data-action="logout">Log out</button>`
+            : state.guestMode
+              ? `<span class="pill">Guest</span><button class="ghost-btn" data-action="exit-guest">Sign in</button>`
+              : `<span class="pill">Not signed in</span><button class="ghost-btn" data-action="try-guest">Try as guest</button><button class="primary-btn" data-action="focus-auth">Get started</button>`}
         </div>
       </div>
     </div>
     <main class="app-shell">
       ${renderNotices()}
-      ${state.user ? renderAuthenticatedApp() : renderUnauthedApp()}
+      ${state.user ? renderAuthenticatedApp() : state.guestMode ? renderGuestApp() : renderUnauthedApp()}
     </main>
     ${renderModals()}
   `;
@@ -206,62 +218,94 @@ function renderNotices() {
 }
 
 function renderUnauthedApp() {
+  const isRegister = state.authMode === "register";
   return `
     <section class="hero">
-      <div class="hero-grid">
+      <div class="hero-grid unauthed">
         <div>
           <span class="eyebrow">Track. Train. Play responsibly.</span>
           <h2>A serious blackjack logbook for the real world.</h2>
           <p>
-            BlackStack turns the visual direction from the prototypes into a working web application:
-            log casino sessions, capture hands in cents, and drill basic strategy with live feedback and progress.
+            Log casino sessions, capture hands in cents, and drill basic strategy with live feedback and progress.
           </p>
           <div class="hero-metrics">
             <div class="metric">
-              <label>Track side</label>
+              <label>Track</label>
               <strong>Sessions, bankroll, hand history</strong>
             </div>
             <div class="metric">
-              <label>Learn side</label>
-              <strong>Strategy trainer, chart, progress</strong>
+              <label>Learn</label>
+              <strong>Strategy trainer with progress</strong>
             </div>
-            <div class="metric">
-              <label>Form factor</label>
-              <strong>Mobile-first, but fully responsive on desktop</strong>
-            </div>
+          </div>
+          <div class="toolbar" style="margin-top:18px">
+            <button class="ghost-btn" data-action="try-guest">Continue as guest</button>
           </div>
         </div>
         <div class="auth-layout">
           <section class="auth-card">
             <span class="eyebrow">Account</span>
-            <h2>Sign in to continue</h2>
+            <h2>${isRegister ? "Create your account" : "Sign in to continue"}</h2>
             <p class="inline-note">
-              Use your API-backed account to unlock session history, trainer progress, and bankroll stats.
+              ${isRegister
+                ? "Build a personal log of sessions, hands, and trainer progress."
+                : "Unlock session history, trainer progress, and bankroll stats."}
             </p>
             <div class="auth-tabs">
-              <button class="auth-tab ${state.authMode === "login" ? "active" : ""}" data-action="set-auth-mode" data-mode="login">Sign in</button>
-              <button class="auth-tab ${state.authMode === "register" ? "active" : ""}" data-action="set-auth-mode" data-mode="register">Register</button>
+              <button class="auth-tab ${!isRegister ? "active" : ""}" data-action="set-auth-mode" data-mode="login">Sign in</button>
+              <button class="auth-tab ${isRegister ? "active" : ""}" data-action="set-auth-mode" data-mode="register">Register</button>
             </div>
-            <form class="auth-form" data-form="auth">
-              ${state.authMode === "register" ? `
+            <form class="auth-form" data-form="auth" novalidate>
+              ${isRegister ? `
                 <div class="field">
                   <label for="auth-name">Name</label>
-                  <input id="auth-name" name="name" type="text" placeholder="Alex Cardcounter" required />
+                  <input id="auth-name" name="name" type="text" placeholder="Alex Cardcounter" required minlength="2" />
+                  <span class="field-error" data-error-for="name"></span>
                 </div>
               ` : ""}
               <div class="field">
                 <label for="auth-email">Email</label>
-                <input id="auth-email" name="email" type="email" placeholder="alex@example.com" required />
+                <input id="auth-email" name="email" type="email" placeholder="alex@example.com" required autocomplete="email" />
+                <span class="field-error" data-error-for="email"></span>
               </div>
               <div class="field">
                 <label for="auth-password">Password</label>
-                <input id="auth-password" name="password" type="password" placeholder="SecurePass1" required />
+                <input id="auth-password" name="password" type="password" placeholder="${isRegister ? "Min 8 chars · upper · lower · number" : "Your password"}" required autocomplete="${isRegister ? "new-password" : "current-password"}" />
+                ${isRegister ? `
+                  <div class="password-strength-bar" data-strength><span></span><span></span><span></span><span></span></div>
+                  <ul class="password-rules" data-password-rules>
+                    ${PASSWORD_RULES.map((rule) => `<li data-rule="${rule.id}">${rule.label}</li>`).join("")}
+                  </ul>
+                ` : ""}
+                <span class="field-error" data-error-for="password"></span>
               </div>
-              <button class="primary-btn" type="submit">${state.authMode === "login" ? "Sign in" : "Create account"}</button>
+              <button class="primary-btn" type="submit">${isRegister ? "Create account" : "Sign in"}</button>
             </form>
           </section>
         </div>
       </div>
+    </section>
+  `;
+}
+
+function renderGuestApp() {
+  return `
+    <section class="guest-banner">
+      <p><strong>Guest mode.</strong> Browse the strategy chart and rules. Sign in to save sessions, log hands, and track trainer progress.</p>
+      <div class="toolbar">
+        <button class="primary-btn" data-action="exit-guest">Sign in</button>
+      </div>
+    </section>
+    <section class="trainer-layout">
+      <article class="trainer-card">
+        <div class="section-head">
+          <div>
+            <h2>Basic Strategy Reference</h2>
+            <p>Read-only chart preview. The interactive trainer requires an account.</p>
+          </div>
+        </div>
+        ${renderChartPreview()}
+      </article>
     </section>
   `;
 }
@@ -1027,6 +1071,121 @@ function bindGlobalEvents() {
   document.querySelectorAll("[data-form]").forEach((form) => {
     form.addEventListener("submit", onFormSubmit);
   });
+
+  bindAuthValidation();
+}
+
+function bindAuthValidation() {
+  const form = document.querySelector('form[data-form="auth"]');
+  if (!form) return;
+
+  const emailInput = form.querySelector("#auth-email");
+  const passwordInput = form.querySelector("#auth-password");
+  const nameInput = form.querySelector("#auth-name");
+  const isRegister = state.authMode === "register";
+
+  if (emailInput) {
+    emailInput.addEventListener("input", () => validateEmailField(emailInput));
+    emailInput.addEventListener("blur", () => validateEmailField(emailInput, true));
+  }
+
+  if (passwordInput) {
+    passwordInput.addEventListener("input", () => {
+      if (isRegister) updatePasswordRulesUi(passwordInput.value);
+      validatePasswordField(passwordInput, isRegister);
+    });
+  }
+
+  if (nameInput) {
+    nameInput.addEventListener("blur", () => validateNameField(nameInput));
+  }
+}
+
+function setFieldError(form, fieldName, message) {
+  const errorEl = form.querySelector(`[data-error-for="${fieldName}"]`);
+  if (errorEl) errorEl.textContent = message || "";
+  const input = form.querySelector(`[name="${fieldName}"]`);
+  if (input) {
+    if (message) {
+      input.classList.add("invalid");
+      input.classList.remove("valid");
+      input.setAttribute("aria-invalid", "true");
+    } else {
+      input.classList.remove("invalid");
+      input.classList.add("valid");
+      input.removeAttribute("aria-invalid");
+    }
+  }
+}
+
+function validateEmailField(input, showEmptyError = false) {
+  const value = input.value.trim();
+  const form = input.form;
+  if (!value) {
+    setFieldError(form, "email", showEmptyError ? "Email is required." : "");
+    if (!showEmptyError) input.classList.remove("invalid", "valid");
+    return !showEmptyError;
+  }
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  setFieldError(form, "email", ok ? "" : "Enter a valid email address.");
+  return ok;
+}
+
+function validateNameField(input) {
+  const value = input.value.trim();
+  const form = input.form;
+  if (!value) {
+    setFieldError(form, "name", "Name is required.");
+    return false;
+  }
+  if (value.length < 2) {
+    setFieldError(form, "name", "Name must be at least 2 characters.");
+    return false;
+  }
+  setFieldError(form, "name", "");
+  return true;
+}
+
+function validatePasswordField(input, isRegister) {
+  const value = input.value;
+  const form = input.form;
+  if (!value) {
+    setFieldError(form, "password", "");
+    input.classList.remove("invalid", "valid");
+    return false;
+  }
+  if (!isRegister) {
+    setFieldError(form, "password", "");
+    return true;
+  }
+  const failing = PASSWORD_RULES.filter((rule) => !rule.test(value));
+  if (failing.length) {
+    setFieldError(form, "password", `Still needed: ${failing.map((r) => r.label.toLowerCase()).join(", ")}.`);
+    return false;
+  }
+  setFieldError(form, "password", "");
+  return true;
+}
+
+function updatePasswordRulesUi(value) {
+  const list = document.querySelector("[data-password-rules]");
+  if (!list) return;
+  let passed = 0;
+  PASSWORD_RULES.forEach((rule) => {
+    const item = list.querySelector(`[data-rule="${rule.id}"]`);
+    if (!item) return;
+    if (rule.test(value)) {
+      item.classList.add("met");
+      passed += 1;
+    } else {
+      item.classList.remove("met");
+    }
+  });
+  const bar = document.querySelector("[data-strength]");
+  if (bar) {
+    bar.classList.remove("s1", "s2", "s3", "s4");
+    if (passed > 0) bar.classList.add(`s${passed}`);
+  }
 }
 
 async function onActionClick(event) {
@@ -1070,6 +1229,23 @@ async function onActionClick(event) {
   }
 
   if (action === "focus-auth") {
+    state.guestMode = false;
+    render();
+    document.querySelector("#auth-email")?.focus();
+    return;
+  }
+
+  if (action === "try-guest") {
+    state.guestMode = true;
+    state.currentView = "trainer";
+    render();
+    return;
+  }
+
+  if (action === "exit-guest") {
+    state.guestMode = false;
+    state.authMode = "login";
+    render();
     document.querySelector("#auth-email")?.focus();
     return;
   }
@@ -1163,15 +1339,35 @@ async function onFormSubmit(event) {
 }
 
 async function submitAuth(formData) {
-  const payload = {
-    email: String(formData.get("email") || "").trim(),
-    password: String(formData.get("password") || ""),
-  };
+  const form = document.querySelector('form[data-form="auth"]');
+  const email = String(formData.get("email") || "").trim();
+  const password = String(formData.get("password") || "");
+  const isRegister = state.authMode === "register";
+  const name = isRegister ? String(formData.get("name") || "").trim() : "";
 
-  const endpoint = state.authMode === "login" ? "/auth/login" : "/auth/register";
-  if (state.authMode === "register") {
-    payload.name = String(formData.get("name") || "").trim();
+  const errors = [];
+  if (!email) errors.push("Email is required.");
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("Enter a valid email address.");
+  if (!password) errors.push("Password is required.");
+  if (isRegister) {
+    if (!name || name.length < 2) errors.push("Name must be at least 2 characters.");
+    const failing = PASSWORD_RULES.filter((rule) => !rule.test(password));
+    if (failing.length) errors.push(`Password needs: ${failing.map((r) => r.label.toLowerCase()).join(", ")}.`);
   }
+
+  if (form) {
+    setFieldError(form, "email", email ? (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "" : "Enter a valid email address.") : "Email is required.");
+    setFieldError(form, "password", password ? (isRegister ? (PASSWORD_RULES.every((r) => r.test(password)) ? "" : "Password does not meet the requirements above.") : "") : "Password is required.");
+    if (isRegister) setFieldError(form, "name", name.length >= 2 ? "" : "Name must be at least 2 characters.");
+  }
+
+  if (errors.length) {
+    throw new Error(errors[0]);
+  }
+
+  const payload = { email, password };
+  const endpoint = isRegister ? "/auth/register" : "/auth/login";
+  if (isRegister) payload.name = name;
 
   const data = await api(endpoint, {
     method: "POST",
@@ -1179,7 +1375,9 @@ async function submitAuth(formData) {
   }, false);
 
   persistTokens(data);
-  addNotice(state.authMode === "login" ? "Signed in successfully." : "Account created successfully.", "success");
+  state.guestMode = false;
+  state.currentView = "dashboard";
+  addNotice(isRegister ? "Account created. Welcome." : "Signed in successfully.", "success");
   await hydrateApp();
 }
 
@@ -1204,6 +1402,9 @@ async function logoutUser() {
   state.trainerScenario = null;
   state.trainerFeedback = null;
   state.currentView = "dashboard";
+  state.guestMode = false;
+  state.authMode = "login";
+  state.loading.app = false;
   addNotice("Signed out.", "success");
   render();
 }

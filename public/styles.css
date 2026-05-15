@@ -179,9 +179,13 @@ a { color: inherit; }
 
 .hero-grid {
   display: grid;
-  grid-template-columns: 1.7fr 1fr;
-  gap: 32px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr);
+  gap: 40px;
   align-items: center;
+}
+
+.hero-grid.unauthed {
+  grid-template-columns: minmax(0, 1.2fr) minmax(380px, 460px);
 }
 
 .eyebrow {
@@ -790,10 +794,9 @@ button.session-row {
 /* ── Auth ───────────────────────────────────────────── */
 .auth-layout {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: 1fr;
   gap: 24px;
-  min-height: calc(100vh - var(--header-height) - 48px);
-  align-items: center;
+  align-items: stretch;
 }
 
 .auth-card { min-height: unset; }
@@ -826,6 +829,106 @@ button.session-row {
   background: rgba(212, 175, 106, 0.12);
   color: var(--gold-soft);
   border-color: rgba(212, 175, 106, 0.28);
+}
+
+/* ── Field validation ────────────────────────────────── */
+.field input.invalid,
+.field input[aria-invalid="true"] {
+  border-color: rgba(212, 112, 112, 0.55);
+  box-shadow: 0 0 0 3px rgba(212, 112, 112, 0.08);
+}
+
+.field input.valid {
+  border-color: rgba(93, 168, 122, 0.42);
+}
+
+.field-error {
+  color: var(--red);
+  font-size: 0.78rem;
+  margin-top: 4px;
+  min-height: 1em;
+}
+
+.password-rules {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.password-rules li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+}
+
+.password-rules li::before {
+  content: "○";
+  color: var(--muted);
+  font-size: 0.7rem;
+  width: 1em;
+  display: inline-block;
+  text-align: center;
+}
+
+.password-rules li.met {
+  color: var(--green);
+}
+
+.password-rules li.met::before {
+  content: "✓";
+  color: var(--green);
+}
+
+.password-rules ul {
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.password-strength-bar {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.password-strength-bar span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  transition: background 0.2s;
+}
+
+.password-strength-bar.s1 span:nth-child(-n+1),
+.password-strength-bar.s2 span:nth-child(-n+2),
+.password-strength-bar.s3 span:nth-child(-n+3),
+.password-strength-bar.s4 span:nth-child(-n+4) { background: var(--red); }
+.password-strength-bar.s2 span:nth-child(-n+2) { background: var(--orange); }
+.password-strength-bar.s3 span:nth-child(-n+3) { background: var(--gold); }
+.password-strength-bar.s4 span:nth-child(-n+4) { background: var(--green); }
+
+/* ── Guest banner ────────────────────────────────────── */
+.guest-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  background: var(--gold-muted);
+  border: 1px solid var(--line-warm);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.guest-banner p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
 }
 
 /* ── Feedback / notices ─────────────────────────────── */
@@ -1129,12 +1232,9 @@ button.session-row {
 @media (max-width: 1200px) {
   :root { --sidebar-width: 240px; }
 
-  .hero-grid { grid-template-columns: 1fr; }
-  .hero-grid > :last-child { display: none; }
-
+  .hero-grid,
+  .hero-grid.unauthed { grid-template-columns: 1fr; }
   .content-grid { grid-template-columns: var(--sidebar-width) minmax(0, 1fr); }
-
-  .auth-layout { grid-template-columns: 1fr 1fr; }
   .dashboard-grid { grid-template-columns: 1fr; }
 }
 
@@ -1153,9 +1253,6 @@ button.session-row {
   .trainer-aside { position: static; }
 
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-  .auth-layout { grid-template-columns: 1fr; }
-  .auth-layout > :first-child { display: none; }
 }
 
 @media (max-width: 640px) {

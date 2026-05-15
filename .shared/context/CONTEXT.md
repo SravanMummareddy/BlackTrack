@@ -36,6 +36,12 @@ Design exploration is complete and the backend is partially operational. Three p
 - [x] Docs cleanup slice completed: architecture, database, deployment, runbook, and style guide docs now reflect the current app instead of templates
 - [x] Analytics slice completed: `/users/me/stats` now supports period filtering and casino breakdowns, and the dashboard consumes those live analytics
 - [x] Strategy progression slice completed: trainer progress now includes streaks and a mistakes review queue with direct scenario reloads
+- [x] Landing / auth UX hardening (2026-05-15):
+  - Fixed CSS that hid the entire login/signup card below 1200px (`.hero-grid > :last-child { display: none }`) and again below 1024px (`.auth-layout > :first-child { display: none }`). Auth card now visible at every breakpoint; hero columns reflow with `minmax()` so login no longer feels squished on desktop.
+  - Added live HCI-style validation on register/login: email regex (input + blur), name length (blur), password rules as a `✓/○` checklist plus a 4-segment strength bar that updates per keystroke. `submitAuth` blocks network calls when client-side rules fail and shows the specific failing rule inline.
+  - Real guest mode: `try-guest` action shows the basic-strategy chart reference + banner explaining sessions/trainer progress require an account; `exit-guest` returns to the sign-in form. Topbar exposes the CTA.
+  - Post-login routing fixed: `submitAuth` sets `state.currentView = "dashboard"` and clears `state.guestMode`; `hydrateApp` wraps the parallel hydration in `try/finally` so `state.loading.app` always clears (kills the stuck "Loading application" screen).
+  - Logout fully resets `loading.app`, `guestMode`, and `authMode`.
 
 ---
 
@@ -90,10 +96,12 @@ Progression run:  2026-05-14 — typecheck passed; integration suite passed with
 
 ## Next Steps for Incoming Agent
 
-1. Complete Chunk 7: session metadata, responsible-play features, or another product-depth slice
-2. Decide whether to split the single integration test into smaller focused files as coverage grows
-3. Add tags, mood tracking, budget ring logic, or further dashboard depth based on product priority
-4. Continue shipping in small vertical slices with git checkpoints after each usable milestone
+1. **Verify auth + dashboard fixes in a real browser** at 375px / 768px / 1280px; confirm: (a) login card visible at all widths, (b) password checklist turns green per rule, (c) successful login lands on dashboard (not unauthed home), (d) "Try as guest" shows chart-only view.
+2. **Add automated coverage** for the new client validation helpers and the auth submit guard (currently unit-tested only by hand). Candidates: a Playwright/Cypress smoke for login+dashboard redirect, plus a Vitest module test against `validatePasswordField` / `validateEmailField` once they're factored out of `app.js`.
+3. **Investigate** whether `/users/me` ever returns a non-2xx for a freshly registered user — if it does, that's the real cause of the "signed in but back to home" symptom users were reporting before this fix.
+4. Complete Chunk 7: session metadata, responsible-play features, or another product-depth slice.
+5. Decide whether to split the single integration test into smaller focused files as coverage grows.
+6. Continue shipping in small vertical slices with git checkpoints after each usable milestone.
 
 ---
 
