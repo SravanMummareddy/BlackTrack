@@ -9,6 +9,8 @@ export interface CreateSessionInput {
   decks?: number;
   buyIn: number;
   notes?: string;
+  tags?: string[];
+  moodStart?: number;
 }
 
 export interface UpdateSessionInput {
@@ -16,6 +18,9 @@ export interface UpdateSessionInput {
   notes?: string;
   cashOut?: number;
   status?: SessionStatus;
+  tags?: string[];
+  moodEnd?: number;
+  completionNotes?: string;
 }
 
 export interface PaginatedSessions {
@@ -41,6 +46,8 @@ export async function createSession(
       decks: input.decks ?? 6,
       buyIn: input.buyIn,
       notes: input.notes,
+      tags: input.tags ?? [],
+      moodStart: input.moodStart,
     },
   });
 }
@@ -95,6 +102,9 @@ export async function updateSession(
   if (input.casinoName !== undefined) data.casinoName = input.casinoName;
   if (input.notes !== undefined) data.notes = input.notes;
   if (input.cashOut !== undefined) data.cashOut = input.cashOut;
+  if (input.tags !== undefined) data.tags = input.tags;
+  if (input.moodEnd !== undefined) data.moodEnd = input.moodEnd;
+  if (input.completionNotes !== undefined) data.completionNotes = input.completionNotes;
   if (input.status !== undefined) {
     data.status = input.status;
     if (input.status === 'COMPLETED') {

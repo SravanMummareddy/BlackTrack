@@ -19,9 +19,11 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
+    "db:seed": "bun run prisma/seed.ts",
     "seed:strategy": "bun run scripts/seed-strategy.ts",
     "handoff": "./scripts/handoff.sh",
-    "sync": "./scripts/sync-instructions.sh"
+    "sync": "./scripts/sync-instructions.sh",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",

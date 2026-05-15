@@ -96,12 +96,21 @@ Progression run:  2026-05-14 — typecheck passed; integration suite passed with
 
 ## Next Steps for Incoming Agent
 
-1. **Verify auth + dashboard fixes in a real browser** at 375px / 768px / 1280px; confirm: (a) login card visible at all widths, (b) password checklist turns green per rule, (c) successful login lands on dashboard (not unauthed home), (d) "Try as guest" shows chart-only view.
-2. **Add automated coverage** for the new client validation helpers and the auth submit guard (currently unit-tested only by hand). Candidates: a Playwright/Cypress smoke for login+dashboard redirect, plus a Vitest module test against `validatePasswordField` / `validateEmailField` once they're factored out of `app.js`.
-3. **Investigate** whether `/users/me` ever returns a non-2xx for a freshly registered user — if it does, that's the real cause of the "signed in but back to home" symptom users were reporting before this fix.
-4. Complete Chunk 7: session metadata, responsible-play features, or another product-depth slice.
-5. Decide whether to split the single integration test into smaller focused files as coverage grows.
-6. Continue shipping in small vertical slices with git checkpoints after each usable milestone.
+**User direction (2026-05-15)**: still in dev phase — finish feature completeness FIRST, then circle back to browser verification, automated UI tests, and the open `/users/me` investigation. The roadmap below is sequenced; ship each slice end-to-end (schema → API → UI → tests → commit) before starting the next.
+
+1. **Slice A — Session metadata** (next): tags, pre/post session mood, completion notes.
+2. **Slice B — Budget ring**: monthly budget setting + dashboard ring + warning state.
+3. **Slice C — Session limits + break mode**: per-session loss/time limits, reflection prompt, break-mode lockout.
+4. **Slice D — Mood × result analytics**: aggregation endpoint + dashboard widget.
+5. **Slice E — Trainer depth**: count drills, deviation drills, difficulty slider.
+6. **Slice F — Profile management**: change password, export, delete account.
+7. **Slice G — Strategy content verification**.
+
+After all slices land:
+- Browser-verify the auth + dashboard UX hardening at 375 / 768 / 1280 px.
+- Add Playwright/Cypress smoke for login → dashboard + unit tests for the password/email validators (extract from `app.js` first).
+- Investigate `/users/me` non-2xx-on-fresh-register edge case.
+- Decide whether to split `tests/integration/api.integration.test.ts` into per-feature files.
 
 ---
 

@@ -64,6 +64,10 @@ model CasinoSession {
   buyIn      Int           // amount brought to table in cents
   cashOut    Int?          // final chip count in cents
   notes      String?
+  tags       String[]      @default([])   // bounded chip vocabulary, validated at API layer
+  moodStart  Int?          // 1-5 emoji scale captured on session create
+  moodEnd    Int?          // 1-5 emoji scale captured on session complete
+  completionNotes String?  // free-form notes captured on session complete
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 

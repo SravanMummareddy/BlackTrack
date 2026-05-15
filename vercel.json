@@ -1,0 +1,7 @@
+{
+  "buildCommand": "prisma generate && tsc --project tsconfig.json",
+  "outputDirectory": "dist",
+  "installCommand": "bun install",
+  "framework": null,
+  "nodeVersion": "20.x"
+}

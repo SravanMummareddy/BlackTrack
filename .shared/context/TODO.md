@@ -2,6 +2,39 @@
 
 ---
 
+## Feature Completion Roadmap (active, sequenced)
+
+We are in development phase. Ship every slice end-to-end (schema → API → UI → seed/tests) before moving on. Polish, automation tests, and browser verification come AFTER feature completeness.
+
+1. **Slice A — Session metadata** (in progress next)
+   - Tags on sessions (predefined chips + free-form)
+   - Pre-session mood (1–5) and post-session mood on completion
+   - Completion notes textarea on session-complete modal
+   - Surfaced in session detail + dashboard
+2. **Slice B — Budget ring (responsible play)**
+   - Monthly budget setting on user profile
+   - `% used`, `days left`, `net P/L` computed server-side from sessions in the current month
+   - Dashboard ring widget + warning state when nearing/over budget
+3. **Slice C — Session limits + break mode**
+   - Per-session loss limit, time limit (set at session create)
+   - Reflection prompt when limits are hit; option to end or extend
+   - 24h / 7d / 30d break mode that blocks new session creation
+4. **Slice D — Mood × result analytics**
+   - Aggregation endpoint returning sessions grouped by mood bucket with net P/L and win rate
+   - Dashboard scatter / grouped-bar widget
+5. **Slice E — Trainer depth**
+   - Count-drill scenarios (running count / true count)
+   - Strategy-deviation scenarios (illustrious 18)
+   - Difficulty slider in trainer
+6. **Slice F — Profile / account management**
+   - Change password, export data (JSON), delete account
+7. **Slice G — Strategy content verification**
+   - Confirm seeded scenarios + evaluator against reference basic-strategy chart
+
+Each slice ends with: typecheck pass, integration test added or updated, commit, doc refresh.
+
+---
+
 ## High Priority
 
 - [x] **Responsive web app shell** — Make `/` load a stable, working desktop/mobile web interface from `public/`
