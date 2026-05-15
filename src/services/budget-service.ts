@@ -53,3 +53,78 @@ export function resolveEffectiveBudget(
   }
   return best;
 }
+
+import { prisma } from '../database';
+
+export interface MonthlyBudgetView {
+  month: string;
+  budgetCents: number | null;
+  effectiveFrom: string | null;
+  netResultCents: number;
+  lossUsedCents: number;
+  percentUsed: number | null;
+  state: BudgetState | null;
+  daysLeftInMonth: number;
+}
+
+function formatMonth(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+export async function getMonthlyBudgetView(
+  userId: string,
+  now: Date = new Date()
+): Promise<MonthlyBudgetView> {
+  const monthStart = monthStartUtc(now);
+  const monthEnd = nextMonthStartUtc(monthStart);
+
+  const [settings, sessions] = await Promise.all([
+    prisma.budgetSetting.findMany({ where: { userId }, orderBy: { effectiveFrom: 'desc' } }),
+    prisma.casinoSession.findMany({
+      where: {
+        userId,
+        status: 'COMPLETED',
+        endedAt: { gte: monthStart, lt: monthEnd },
+        cashOut: { not: null },
+      },
+      select: { buyIn: true, cashOut: true },
+    }),
+  ]);
+
+  const effective = resolveEffectiveBudget(settings, monthStart);
+  const netResultCents = sessions.reduce((sum, s) => sum + ((s.cashOut ?? 0) - s.buyIn), 0);
+  const lossUsedCents = Math.max(0, -netResultCents);
+  const percentUsed = computePercentUsed(lossUsedCents, effective?.amountCents ?? null);
+
+  return {
+    month: formatMonth(monthStart),
+    budgetCents: effective?.amountCents ?? null,
+    effectiveFrom: effective?.effectiveFrom.toISOString() ?? null,
+    netResultCents,
+    lossUsedCents,
+    percentUsed,
+    state: classifyState(percentUsed),
+    daysLeftInMonth: daysLeftInMonth(now),
+  };
+}
+
+export async function setBudget(
+  userId: string,
+  amountCents: number,
+  effectiveFrom: Date
+): Promise<BudgetSettingRow> {
+  return prisma.budgetSetting.upsert({
+    where: { userId_effectiveFrom: { userId, effectiveFrom } },
+    update: { amountCents },
+    create: { userId, amountCents, effectiveFrom },
+  });
+}
+
+export async function listBudgetHistory(userId: string): Promise<BudgetSettingRow[]> {
+  return prisma.budgetSetting.findMany({
+    where: { userId },
+    orderBy: { effectiveFrom: 'desc' },
+  });
+}
