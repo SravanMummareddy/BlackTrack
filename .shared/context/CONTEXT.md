@@ -9,7 +9,7 @@
 
 Design exploration is complete and the backend is partially operational. Three prototype iterations still live in `design/` (wireframes → prototype → v2), and `design/prototype.html` is the currently accepted visual/interaction reference. The Express/Prisma backend supports auth, sessions, nested hand logging, overall bankroll stats, and strategy training endpoints. A real responsive web app is now being built under `public/`, served by Express, and has working auth, sessions, and trainer slices, but it is not feature-complete yet.
 
-**Branch**: `main`
+**Branch**: `feat/slice-b-budget-ring`
 **Last commit**: Initial commit + skeleton + design reorganization
 **Environment**: Development — local only
 
@@ -48,13 +48,17 @@ Design exploration is complete and the backend is partially operational. Three p
   - Production web app create-session and complete-session modals now collect predefined tags, custom tags, starting mood, ending mood, and completion notes.
   - Dashboard active-session focus, session rows, and session detail now surface tags, mood, and completion notes.
   - `docs/API.md` documents the new session metadata request/response fields.
+- [x] Slice B budget ring (2026-05-15):
+  - Monthly budget schema, migration, service helpers, API endpoints, unit tests, and integration tests are in place.
+  - Dashboard now loads `/users/me/budget`, renders a monthly net-loss ring with ok/caution/over states, and supports inline budget save/edit.
+  - `docs/API.md` documents `GET /users/me/budget`, `PUT /users/me/budget`, and `GET /users/me/budget/history`.
 
 ---
 
 ## In Progress
 
 - [ ] Responsive web app implementation in small vertical slices
-- [ ] Chunk 7 — responsible-play features or deeper analytics polish
+- [ ] Slice C — session limits + break mode
 
 ---
 
@@ -71,12 +75,14 @@ Design exploration is complete and the backend is partially operational. Three p
 <!-- Specific files or modules that were modified — helps incoming agent orient quickly -->
 - `src/api/index.ts` — wired auth, sessions, nested hands, users, and strategy routers
 - `src/api/users.ts` — added `/me` and `/me/stats`
+- `src/api/budget.ts` — added monthly budget view, upsert, and history endpoints
+- `src/services/budget-service.ts` — budget month math, effective-setting resolver, state classification, monthly aggregation
 - `src/api/strategy.ts` — added random scenario, attempt submission, and progress endpoints
 - `src/services/strategy-service.ts` — ported strategy tables, evaluation logic, seed payload builder
 - `scripts/seed-strategy.ts` — idempotent seed script based on the shared strategy tables
 - `public/index.html` — initial web app HTML entrypoint
-- `public/styles.css` — responsive design system, application shell styling, and metadata chip/readout styling
-- `public/app.js` — client-side app state, auth flow, dashboard/session/trainer flows, metadata capture, and responsive shortcuts
+- `public/styles.css` — responsive design system, application shell styling, metadata chip/readout styling, and budget ring styles
+- `public/app.js` — client-side app state, auth flow, dashboard/session/trainer flows, metadata capture, budget ring, and responsive shortcuts
 - `design/prototype*.html/jsx` — restored to original prototype behavior after reverting API-coupled experiment
 
 ---
@@ -97,6 +103,7 @@ Docs cleanup:     2026-05-14 — architecture, database, deployment, runbook, an
 Analytics run:    2026-05-14 — typecheck passed; integration suite passed with 58 assertions after adding period and casino analytics coverage
 Progression run:  2026-05-14 — typecheck passed; integration suite passed with 67 assertions after adding streaks and mistakes review coverage
 Metadata run:     2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; full `bun test` passed with 20 tests / 2897 assertions after fixing the test harness app import. `bun run lint` is blocked because the repo has no ESLint config file.
+Budget run:       2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; `bun test tests/unit/budget-service.test.ts` passed; `bun test tests/integration/api.integration.test.ts` passed with 10 tests / 109 assertions.
 ```
 
 ---
@@ -105,12 +112,11 @@ Metadata run:     2026-05-15 — `node --check public/app.js` passed; `bun run t
 
 **User direction (2026-05-15)**: still in dev phase — finish feature completeness FIRST, then circle back to browser verification, automated UI tests, and the open `/users/me` investigation. The roadmap below is sequenced; ship each slice end-to-end (schema → API → UI → tests → commit) before starting the next.
 
-1. **Slice B — Budget ring** (next): monthly budget setting + dashboard ring + warning state.
-2. **Slice C — Session limits + break mode**: per-session loss/time limits, reflection prompt, break-mode lockout.
-3. **Slice D — Mood × result analytics**: aggregation endpoint + dashboard widget.
-4. **Slice E — Trainer depth**: count drills, deviation drills, difficulty slider.
-5. **Slice F — Profile management**: change password, export, delete account.
-6. **Slice G — Strategy content verification**.
+1. **Slice C — Session limits + break mode** (next): per-session loss/time limits, reflection prompt, break-mode lockout.
+2. **Slice D — Mood × result analytics**: aggregation endpoint + dashboard widget.
+3. **Slice E — Trainer depth**: count drills, deviation drills, difficulty slider.
+4. **Slice F — Profile management**: change password, export, delete account.
+5. **Slice G — Strategy content verification**.
 
 After all slices land:
 - Browser-verify the auth + dashboard UX hardening at 375 / 768 / 1280 px.
@@ -134,3 +140,4 @@ After all slices land:
 - Dashboard shortcuts now explicitly load the active session before opening the hand logger to avoid logging against stale selection state.
 - Core docs are now aligned to the real app; the biggest remaining gaps are product depth and polish rather than documentation drift.
 - `/users/me/stats` now supports `period=all|year|month|week` and returns `topCasinos`, session outcome summaries, and average session net.
+- `/users/me/budget` computes current-month net loss server-side; budget state is visual only and does not block session creation yet.

@@ -1,5 +1,6 @@
 const API_BASE = "/api/v1";
 const TOKEN_KEY = "blackstack.auth.tokens";
+const BUDGET_RING_CIRCUMFERENCE = 2 * Math.PI * 42;
 
 const PASSWORD_RULES = [
   { id: "len", label: "At least 8 characters", test: (p) => p.length >= 8 },
@@ -23,6 +24,8 @@ const state = {
   tokens: loadTokens(),
   user: null,
   stats: null,
+  budget: null,
+  budgetFormOpen: false,
   statsPeriod: "all",
   sessions: [],
   selectedSessionId: null,
@@ -38,6 +41,7 @@ const state = {
   loading: {
     app: true,
     stats: false,
+    budget: false,
     session: false,
     trainer: false,
   },
@@ -115,6 +119,8 @@ async function hydrateApp() {
     clearTokens();
     state.user = null;
     state.stats = null;
+    state.budget = null;
+    state.budgetFormOpen = false;
     state.sessions = [];
     state.selectedSessionId = null;
     state.selectedSession = null;
@@ -131,6 +137,9 @@ async function hydrateApp() {
     await Promise.all([
       loadUserStats(state.statsPeriod, false).catch(() => {
         state.stats = null;
+      }),
+      loadBudget(false).catch(() => {
+        state.budget = null;
       }),
       api("/sessions").then((sessions) => {
         state.sessions = sessions?.data ?? [];
@@ -212,6 +221,7 @@ function render() {
   `;
 
   bindGlobalEvents();
+  paintBudgetCard();
 }
 
 function renderNotices() {
@@ -440,28 +450,31 @@ function renderDashboardView() {
           </div>
         `}
       </article>
-      <article class="session-card dashboard-actions">
-        <div class="section-head">
-          <div>
-            <h2>Quick Actions</h2>
-            <p>Keep the most common bankroll and practice flows one click away.</p>
+      <div class="dashboard-side-stack">
+        ${renderBudgetCardShell()}
+        <article class="session-card dashboard-actions">
+          <div class="section-head">
+            <div>
+              <h2>Quick Actions</h2>
+              <p>Keep the most common bankroll and practice flows one click away.</p>
+            </div>
           </div>
-        </div>
-        <div class="action-stack">
-          <button class="nav-btn quick-action" data-action="open-modal" data-modal="session-create">
-            <span>New Session</span>
-            <small>Capture table limits, buy-in, and notes before you start.</small>
-          </button>
-          <button class="nav-btn quick-action" data-action="switch-view" data-view="sessions">
-            <span>Review Sessions</span>
-            <small>Inspect recent results, complete open sessions, and audit hand history.</small>
-          </button>
-          <button class="nav-btn quick-action" data-action="switch-view" data-view="trainer">
-            <span>Run Trainer</span>
-            <small>Drill hard totals, soft totals, and pairs against your live progress data.</small>
-          </button>
-        </div>
-      </article>
+          <div class="action-stack">
+            <button class="nav-btn quick-action" data-action="open-modal" data-modal="session-create">
+              <span>New Session</span>
+              <small>Capture table limits, buy-in, and notes before you start.</small>
+            </button>
+            <button class="nav-btn quick-action" data-action="switch-view" data-view="sessions">
+              <span>Review Sessions</span>
+              <small>Inspect recent results, complete open sessions, and audit hand history.</small>
+            </button>
+            <button class="nav-btn quick-action" data-action="switch-view" data-view="trainer">
+              <span>Run Trainer</span>
+              <small>Drill hard totals, soft totals, and pairs against your live progress data.</small>
+            </button>
+          </div>
+        </article>
+      </div>
     </section>
     <section class="sessions-grid dashboard-lower-grid">
       <article class="session-card">
@@ -526,6 +539,62 @@ function renderDashboardView() {
         </p>
       </article>
     </section>
+  `;
+}
+
+function renderBudgetCardShell() {
+  return `
+    <article class="session-card budget-card" id="budget-card" data-state="unset" hidden>
+      <div class="section-head budget-card__head">
+        <div>
+          <h2>Monthly Budget</h2>
+          <p>Net-loss cap for the current calendar month.</p>
+        </div>
+        <button type="button" class="subtle-btn" id="budget-edit-btn" data-action="edit-budget" hidden>Edit</button>
+      </div>
+
+      <div class="budget-card__body" id="budget-card-body">
+        <svg class="budget-ring" id="budget-ring-svg" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="budget-ring__track" cx="50" cy="50" r="42" stroke-width="10" fill="none"></circle>
+          <circle
+            class="budget-ring__bar"
+            id="budget-ring-bar"
+            cx="50"
+            cy="50"
+            r="42"
+            stroke-width="10"
+            fill="none"
+            stroke-linecap="round"
+            transform="rotate(-90 50 50)"
+            stroke-dasharray="263.8938"
+            stroke-dashoffset="263.8938"
+          ></circle>
+          <text class="budget-ring__label" id="budget-ring-label" x="50" y="50">-</text>
+        </svg>
+
+        <div class="budget-card__figures">
+          <span class="budget-card__primary" id="budget-primary">Set a monthly budget</span>
+          <span id="budget-net">Track net loss against a cap.</span>
+          <span id="budget-days"></span>
+        </div>
+      </div>
+
+      <form class="surface-form budget-card__form" id="budget-form" data-form="budget" hidden>
+        <div class="field">
+          <label for="budget-input">Monthly net-loss cap (USD)</label>
+          <input type="number" id="budget-input" name="budgetDollars" min="1" step="1" inputmode="numeric" required />
+          <span class="field-error" data-error-for="budgetDollars"></span>
+        </div>
+        <div class="budget-card__actions">
+          <button type="submit" class="primary-btn">Save</button>
+          <button type="button" class="ghost-btn" id="budget-cancel-btn" data-action="cancel-budget">Cancel</button>
+        </div>
+      </form>
+
+      <p class="budget-card__warning" id="budget-warning" hidden>
+        You're over your monthly budget.
+      </p>
+    </article>
   `;
 }
 
@@ -1296,6 +1365,19 @@ async function onActionClick(event) {
     return;
   }
 
+  if (action === "edit-budget") {
+    state.budgetFormOpen = true;
+    paintBudgetCard();
+    document.querySelector("#budget-input")?.focus();
+    return;
+  }
+
+  if (action === "cancel-budget") {
+    state.budgetFormOpen = state.budget?.budgetCents === null;
+    paintBudgetCard();
+    return;
+  }
+
   if (action === "open-modal") {
     openModal(event.currentTarget.dataset.modal);
     return;
@@ -1415,6 +1497,11 @@ async function onFormSubmit(event) {
     if (formName === "update-profile") {
       await updateProfile(formData);
       closeModal("profile-edit");
+      return;
+    }
+
+    if (formName === "budget") {
+      await saveBudget(formData);
     }
   } catch (error) {
     addNotice(error.message || "Something went wrong.", "error");
@@ -1476,6 +1563,8 @@ async function logoutUser() {
   clearTokens();
   state.user = null;
   state.stats = null;
+  state.budget = null;
+  state.budgetFormOpen = false;
   state.sessions = [];
   state.selectedSessionId = null;
   state.selectedSession = null;
@@ -1566,7 +1655,10 @@ async function logHand(formData) {
   addNotice("Hand saved.", "success");
   state.currentView = "sessions";
   await loadSessionDetails(state.selectedSessionId);
-  const [stats] = await Promise.all([loadUserStats(state.statsPeriod, false)]);
+  const [stats] = await Promise.all([
+    loadUserStats(state.statsPeriod, false),
+    loadBudget(false).catch(() => null),
+  ]);
   state.stats = stats;
   render();
 }
@@ -1590,6 +1682,97 @@ async function loadUserStats(period = state.statsPeriod, shouldRender = true) {
     state.loading.stats = false;
     if (shouldRender) render();
   }
+}
+
+async function loadBudget(shouldRender = true) {
+  state.loading.budget = true;
+  if (shouldRender) paintBudgetCard();
+
+  try {
+    state.budget = await api("/users/me/budget");
+    if (state.budget?.budgetCents === null) {
+      state.budgetFormOpen = true;
+    }
+    return state.budget;
+  } catch (error) {
+    if (shouldRender) {
+      addNotice(error.message || "Could not refresh monthly budget.", "error");
+    }
+    throw error;
+  } finally {
+    state.loading.budget = false;
+    if (shouldRender) paintBudgetCard();
+  }
+}
+
+async function saveBudget(formData) {
+  const dollars = Number(formData.get("budgetDollars"));
+  const form = document.querySelector("#budget-form");
+
+  if (!Number.isFinite(dollars) || dollars < 1) {
+    if (form) setFieldError(form, "budgetDollars", "Enter a whole-dollar budget of at least $1.");
+    throw new Error("Enter a monthly budget of at least $1.");
+  }
+
+  if (form) setFieldError(form, "budgetDollars", "");
+
+  state.budget = await api("/users/me/budget", {
+    method: "PUT",
+    body: JSON.stringify({ amountCents: Math.round(dollars * 100) }),
+  }).then(() => api("/users/me/budget"));
+  state.budgetFormOpen = false;
+  addNotice("Monthly budget saved.", "success");
+  render();
+}
+
+function paintBudgetCard() {
+  const card = document.querySelector("#budget-card");
+  if (!card) return;
+
+  const body = document.querySelector("#budget-card-body");
+  const editBtn = document.querySelector("#budget-edit-btn");
+  const form = document.querySelector("#budget-form");
+  const warning = document.querySelector("#budget-warning");
+  const input = document.querySelector("#budget-input");
+  const primary = document.querySelector("#budget-primary");
+  const net = document.querySelector("#budget-net");
+  const days = document.querySelector("#budget-days");
+
+  const view = state.budget;
+  const hasBudget = view?.budgetCents !== null && view?.budgetCents !== undefined;
+  const formOpen = state.budgetFormOpen || !hasBudget;
+
+  card.hidden = false;
+  card.dataset.state = hasBudget ? (view.state ?? "ok") : "unset";
+  card.classList.toggle("loading", state.loading.budget);
+  setBudgetRing(hasBudget ? view.percentUsed : null);
+
+  if (primary) primary.textContent = hasBudget
+    ? `${formatMoney(view.lossUsedCents)} / ${formatMoney(view.budgetCents)}`
+    : "Set a monthly budget";
+  if (net) net.textContent = hasBudget
+    ? `Net P/L ${formatMoney(view.netResultCents)}`
+    : "Track net loss against a personal cap.";
+  if (days) days.textContent = hasBudget ? `${view.daysLeftInMonth} days left this month` : "";
+  if (editBtn) editBtn.hidden = !hasBudget || formOpen;
+  if (body) body.hidden = formOpen && !hasBudget;
+  if (form) form.hidden = !formOpen;
+  if (warning) warning.hidden = view?.state !== "over";
+  if (input && hasBudget && !state.budgetFormOpen) {
+    input.value = String(Math.round(view.budgetCents / 100));
+  }
+}
+
+function setBudgetRing(percentUsed) {
+  const bar = document.querySelector("#budget-ring-bar");
+  const label = document.querySelector("#budget-ring-label");
+  const percent = percentUsed === null || percentUsed === undefined
+    ? 0
+    : Math.min(100, Math.max(0, percentUsed));
+  const offset = BUDGET_RING_CIRCUMFERENCE * (1 - percent / 100);
+
+  if (bar) bar.setAttribute("stroke-dashoffset", String(offset));
+  if (label) label.textContent = percentUsed === null || percentUsed === undefined ? "-" : `${percentUsed}%`;
 }
 
 async function updateProfile(formData) {
@@ -1733,6 +1916,8 @@ async function api(path, init = {}, requireAuth = true, retryOnAuthFailure = tru
       clearTokens();
       state.user = null;
       state.stats = null;
+      state.budget = null;
+      state.budgetFormOpen = false;
       state.sessions = [];
       state.selectedSessionId = null;
       state.selectedSession = null;

@@ -241,6 +241,88 @@ Response `200`:
 }
 ```
 
+## Budget
+
+Monthly budget endpoints track a user's current-month net-loss cap. Money fields are integer cents. Budget enforcement is visual only in this slice; session blocking belongs to later responsible-play work.
+
+### `GET /users/me/budget`
+
+Returns the current month budget view, including server-computed net result, loss used, percent used, days left, and state.
+
+Response `200` when a budget is set:
+
+```json
+{
+  "data": {
+    "monthStart": "2026-05-01T00:00:00.000Z",
+    "budgetCents": 50000,
+    "effectiveFrom": "2026-05-01T00:00:00.000Z",
+    "netResultCents": -23000,
+    "lossUsedCents": 23000,
+    "percentUsed": 46,
+    "state": "ok",
+    "daysLeftInMonth": 17
+  }
+}
+```
+
+If no effective budget exists for the current month, `budgetCents`, `effectiveFrom`, `percentUsed`, and `state` are `null`; `netResultCents`, `lossUsedCents`, and `daysLeftInMonth` are still computed.
+
+### `PUT /users/me/budget`
+
+Upserts a monthly budget setting. If `effectiveFrom` is omitted, the current UTC month start is used.
+
+Request:
+
+```json
+{
+  "amountCents": 50000,
+  "effectiveFrom": "2026-05-01T00:00:00.000Z"
+}
+```
+
+Validation:
+
+- `amountCents` must be an integer of at least `100`.
+- `effectiveFrom`, when supplied, must be the first day of a month at `00:00:00.000Z`.
+- `effectiveFrom` cannot be before the user's account-creation month.
+
+Response `200`:
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "userId": "uuid",
+    "amountCents": 50000,
+    "effectiveFrom": "2026-05-01T00:00:00.000Z",
+    "createdAt": "2026-05-15T16:00:00.000Z",
+    "updatedAt": "2026-05-15T16:00:00.000Z"
+  }
+}
+```
+
+### `GET /users/me/budget/history`
+
+Returns all budget settings for the authenticated user ordered by `effectiveFrom` descending.
+
+Response `200`:
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "userId": "uuid",
+      "amountCents": 50000,
+      "effectiveFrom": "2026-05-01T00:00:00.000Z",
+      "createdAt": "2026-05-15T16:00:00.000Z",
+      "updatedAt": "2026-05-15T16:00:00.000Z"
+    }
+  ]
+}
+```
+
 ## Sessions
 
 Money fields are integer cents.
