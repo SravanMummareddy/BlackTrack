@@ -5,6 +5,7 @@ import sessionsRouter from './sessions';
 import handsRouter from './hands';
 import usersRouter from './users';
 import strategyRouter from './strategy';
+import budgetRouter from './budget';
 
 export const apiRouter = Router();
 
@@ -31,4 +32,5 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/sessions', sessionsRouter);
 apiRouter.use('/sessions/:sessionId/hands', handsRouter);
 apiRouter.use('/users', usersRouter);
+apiRouter.use('/users', budgetRouter);
 apiRouter.use('/strategy', strategyRouter);
