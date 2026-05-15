@@ -1,5 +1,7 @@
 # TODO — BlackStack
 
+> **Current state (2026-05-15):** Slices B, C0, C1, C2, and C (API/service) shipped on `main`. Next up: Slice D — Mood × result analytics. Outstanding UI follow-up: wire session-limits reflection prompt + break-mode controls into `public/`.
+
 ---
 
 ## Feature Completion Roadmap (active, sequenced)
@@ -66,6 +68,7 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] **MD handoff cadence** — `.shared/context/*.md` and key docs refreshed after the Slice B milestone
 - [x] **Budget ring logic** — Monthly budget setting per user; `% used`, `days left`, `net P/L` computed server-side
 - [ ] **Mood × result analytics** — Aggregate stored pre/post session mood for dashboard insight
+- [ ] **Session limits + break mode UI** — Surface `limitState` reflection prompt and `/users/me/break` controls in `public/` (API/service already shipped)
 
 ## Low Priority
 
