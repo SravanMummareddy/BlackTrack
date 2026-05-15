@@ -31,3 +31,25 @@ export function classifyState(percentUsed: number | null): BudgetState | null {
   if (percentUsed >= 75) return 'caution';
   return 'ok';
 }
+
+export interface BudgetSettingRow {
+  id: string;
+  userId: string;
+  amountCents: number;
+  effectiveFrom: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export function resolveEffectiveBudget(
+  settings: BudgetSettingRow[],
+  monthStart: Date
+): BudgetSettingRow | null {
+  let best: BudgetSettingRow | null = null;
+  for (const s of settings) {
+    if (s.effectiveFrom.getTime() <= monthStart.getTime()) {
+      if (!best || s.effectiveFrom.getTime() > best.effectiveFrom.getTime()) best = s;
+    }
+  }
+  return best;
+}

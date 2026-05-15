@@ -4,6 +4,7 @@ import {
   daysLeftInMonth,
   computePercentUsed,
   classifyState,
+  resolveEffectiveBudget,
 } from '../../src/services/budget-service';
 
 describe('monthStartUtc', () => {
@@ -59,5 +60,29 @@ describe('classifyState', () => {
     expect(classifyState(99)).toBe('caution');
     expect(classifyState(100)).toBe('over');
     expect(classifyState(200)).toBe('over');
+  });
+});
+
+describe('resolveEffectiveBudget', () => {
+  const settings = [
+    { id: 'a', userId: 'u', amountCents: 30000, effectiveFrom: new Date('2026-01-01T00:00:00Z'), createdAt: new Date(), updatedAt: new Date() },
+    { id: 'b', userId: 'u', amountCents: 50000, effectiveFrom: new Date('2026-04-01T00:00:00Z'), createdAt: new Date(), updatedAt: new Date() },
+    { id: 'c', userId: 'u', amountCents: 70000, effectiveFrom: new Date('2026-07-01T00:00:00Z'), createdAt: new Date(), updatedAt: new Date() },
+  ];
+
+  test('null when nothing applies', () => {
+    expect(resolveEffectiveBudget(settings, new Date('2025-12-01T00:00:00Z'))).toBe(null);
+  });
+  test('latest setting on/before target month', () => {
+    expect(resolveEffectiveBudget(settings, new Date('2026-05-01T00:00:00Z'))?.amountCents).toBe(50000);
+  });
+  test('exact match', () => {
+    expect(resolveEffectiveBudget(settings, new Date('2026-04-01T00:00:00Z'))?.amountCents).toBe(50000);
+  });
+  test('future months use most recent past row', () => {
+    expect(resolveEffectiveBudget(settings, new Date('2026-09-01T00:00:00Z'))?.amountCents).toBe(70000);
+  });
+  test('empty list', () => {
+    expect(resolveEffectiveBudget([], new Date('2026-05-01T00:00:00Z'))).toBe(null);
   });
 });
