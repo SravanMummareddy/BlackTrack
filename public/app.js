@@ -743,7 +743,7 @@ function renderChartSection(title, table, keys, isSoft = false) {
             ${keys.map((key) => `
               <tr>
                 <td>${isSoft ? `A,${key}` : key.includes ? key : key}</td>
-                ${table[key].map((value) => `<td>${value}</td>`).join("")}
+                ${table[key].map((value) => `<td data-action="${value}">${value}</td>`).join("")}
               </tr>
             `).join("")}
           </tbody>
