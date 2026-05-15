@@ -9,8 +9,8 @@
 
 Design exploration is complete and the backend is partially operational. Three prototype iterations still live in `design/` (wireframes → prototype → v2), and `design/prototype.html` is the currently accepted visual/interaction reference. The Express/Prisma backend supports auth, sessions, nested hand logging, overall bankroll stats, and strategy training endpoints. A real responsive web app is now being built under `public/`, served by Express, and has working auth, sessions, and trainer slices, but it is not feature-complete yet.
 
-**Branch**: `feat/slice-b-budget-ring`
-**Last commit**: Initial commit + skeleton + design reorganization
+**Branch**: `main` after merging `feat/slice-b-budget-ring`
+**Last completed slice commit**: `c5e38b5 feat(ui): add dashboard budget ring`
 **Environment**: Development — local only
 
 ---
@@ -104,6 +104,7 @@ Analytics run:    2026-05-14 — typecheck passed; integration suite passed with
 Progression run:  2026-05-14 — typecheck passed; integration suite passed with 67 assertions after adding streaks and mistakes review coverage
 Metadata run:     2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; full `bun test` passed with 20 tests / 2897 assertions after fixing the test harness app import. `bun run lint` is blocked because the repo has no ESLint config file.
 Budget run:       2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; `bun test tests/unit/budget-service.test.ts` passed; `bun test tests/integration/api.integration.test.ts` passed with 10 tests / 109 assertions.
+Merge run:        2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; full `bun test` passed with 44 tests / 2957 assertions. `bun run lint` remains blocked because ESLint has no repo config file.
 ```
 
 ---

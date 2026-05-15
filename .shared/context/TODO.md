@@ -48,8 +48,8 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 
 ## Medium Priority
 
-- [ ] **Git checkpoints** — Commit after each completed vertical slice with clear messages
-- [ ] **MD handoff cadence** — Refresh `.shared/context/*.md` and key docs after each milestone
+- [x] **Git checkpoints** — Current completed vertical slices have clear checkpoint commits
+- [x] **MD handoff cadence** — `.shared/context/*.md` and key docs refreshed after the Slice B milestone
 - [x] **Budget ring logic** — Monthly budget setting per user; `% used`, `days left`, `net P/L` computed server-side
 - [ ] **Mood × result analytics** — Aggregate stored pre/post session mood for dashboard insight
 
@@ -130,3 +130,4 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Strategy progression slice complete: streaks and missed-hand review added to backend and trainer UI — 2026-05-14
 - [x] Session metadata slice complete: tags, pre/post mood, completion notes, API docs, and integration assertions added — 2026-05-15
 - [x] Slice B budget ring complete: monthly budget settings, computed current-month budget view, dashboard ring widget, API docs, unit tests, and integration tests — 2026-05-15
+- [x] Slice B merge handoff complete: shared context refreshed for merge/push and next slice set to session limits + break mode — 2026-05-15
