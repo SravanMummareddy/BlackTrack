@@ -1,6 +1,6 @@
 # TODO — BlackStack
 
-> **Current state (2026-05-15):** Slices B, C0, C1, C2, C, and D shipped on `main`. Session-limits reflection + break controls wired into `public/`. Manual smoke test documented under `docs/SMOKE_TEST.md`. Next up: Slice E — Trainer depth.
+> **Current state (2026-05-15):** Slices B, C0, C1, C2, C, and D shipped on `main`. Session-limits reflection + break controls wired into `public/`. Manual smoke test documented under `docs/SMOKE_TEST.md`. **Outstanding before Slice E:** 16 UX/flow fixes captured below from the 2026-05-15 user-flow audit (limit editing mid-session, live limit ticking, mood period filter, sessions pagination, password reset, OAuth, E2E tests, CI, etc.). After those: Slice E (Trainer depth — count drills, deviation drills, difficulty slider) and Slice F (Learn hub — lessons, flashcards, quizzes).
 
 ---
 
@@ -44,6 +44,26 @@ We are in development phase. Ship every slice end-to-end (schema → API → UI 
 Each slice ends with: typecheck pass, integration test added or updated, commit, doc refresh.
 
 ---
+
+## UX / Flow Fixes (from 2026-05-15 user-flow audit)
+
+- [ ] **Edit limits mid-session** — Add `lossLimitCents` + `timeLimitMinutes` fields to `renderSessionEditForm` (API already supports it)
+- [ ] **Limit banner in session detail** — Surface the reflection banner inside `/sessions` workspace, not just dashboard focus card
+- [ ] **Live limit ticking** — Client-side timer that re-renders `elapsedMinutes` every 30s on active sessions
+- [ ] **Limit-crossing toast** — Fire an `addNotice` when `anyLimitHit` flips true between fetches
+- [ ] **Break-aware create modal** — When break is active, disable session-create modal submit and show inline "On break until X" hint
+- [ ] **Mood analytics period filter** — Add `period` tabs to the Mood × Result card (API already supports it)
+- [ ] **Budget history view** — Surface `GET /users/me/budget/history` in profile or budget card
+- [ ] **Sessions pagination UI** — Wire `page`/`pageSize` and "Load more" control to `GET /sessions`
+- [ ] **Multiple active sessions** — Conflict warning + switcher in "Current Focus"
+- [ ] **Password reset / forgot-password flow** — Email-based reset, currently missing
+- [ ] **Email verification** — On signup and email-change
+- [ ] **OAuth login wiring** — Schema has fields; no UI or API route
+- [ ] **Trainer chart from API** — Replace hardcoded `chartData` in `app.js` with the reference chart used in tests
+- [ ] **Mistakes queue UI visibility** — Reconcile TODO inconsistency; surface resurfacing in trainer
+- [ ] **E2E test suite** — `tests/e2e/` is empty; add Playwright/Puppeteer browser coverage
+- [ ] **CI pipeline** — Add `.github/workflows/` for typecheck + test on PR
+- [ ] **Error tracking + health endpoint** — `/healthz` and Sentry (or equivalent) wiring
 
 ## High Priority
 
