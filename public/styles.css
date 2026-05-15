@@ -1509,3 +1509,16 @@ button.session-row {
   .trainer-actions { flex-wrap: wrap; }
   .trainer-action  { min-width: 80px; }
 }
+
+.limit-reflection {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+.limit-reflection.danger {
+  border-color: rgba(222, 124, 124, 0.4);
+  background: rgba(222, 124, 124, 0.08);
+}
+.limit-reflection strong { display: block; margin-bottom: 4px; }

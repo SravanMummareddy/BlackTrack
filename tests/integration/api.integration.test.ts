@@ -215,6 +215,28 @@ describe('API integration', () => {
     expect(monthStatsResponse.body.data.period).toBe('month');
     expect(monthStatsResponse.body.data.windowStart).toBeString();
     expect(monthStatsResponse.body.data.sessionsPlayed).toBeGreaterThanOrEqual(1);
+
+    const moodAnalyticsResponse = await request(app)
+      .get('/api/v1/users/me/mood-analytics')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(moodAnalyticsResponse.status).toBe(200);
+    expect(moodAnalyticsResponse.body.data.bucket).toBe('start');
+    expect(moodAnalyticsResponse.body.data.totalCompletedSessions).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(moodAnalyticsResponse.body.data.buckets)).toBe(true);
+    const startMoodBucket = moodAnalyticsResponse.body.data.buckets.find(
+      (b: { mood: number | null }) => b.mood === 4
+    );
+    expect(startMoodBucket).toBeDefined();
+    expect(startMoodBucket.sessions).toBeGreaterThanOrEqual(1);
+
+    const endMoodAnalyticsResponse = await request(app)
+      .get('/api/v1/users/me/mood-analytics?bucket=end&period=month')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(endMoodAnalyticsResponse.status).toBe(200);
+    expect(endMoodAnalyticsResponse.body.data.bucket).toBe('end');
+    expect(endMoodAnalyticsResponse.body.data.period).toBe('month');
   });
 
   test('strategy flow works end to end', async () => {

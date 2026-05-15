@@ -1,6 +1,6 @@
 # TODO — BlackStack
 
-> **Current state (2026-05-15):** Slices B, C0, C1, C2, and C (API/service) shipped on `main`. Next up: Slice D — Mood × result analytics. Outstanding UI follow-up: wire session-limits reflection prompt + break-mode controls into `public/`.
+> **Current state (2026-05-15):** Slices B, C0, C1, C2, C, and D shipped on `main`. Session-limits reflection + break controls wired into `public/`. Manual smoke test documented under `docs/SMOKE_TEST.md`. Next up: Slice E — Trainer depth.
 
 ---
 
@@ -30,9 +30,10 @@ We are in development phase. Ship every slice end-to-end (schema → API → UI 
    - Computed `limitState` returned on every session payload (drives reflection prompt client-side)
    - `GET/PUT/DELETE /users/me/break` with 24h / 7d / 30d durations; `breakUntil` blocks new session creation (403)
    - Unit + integration coverage added; UI surface not yet wired
-6. **Slice D — Mood × result analytics**
-   - Aggregation endpoint returning sessions grouped by mood bucket with net P/L and win rate
-   - Dashboard scatter / grouped-bar widget
+6. **Slice D — Mood × result analytics** (complete)
+   - `GET /users/me/mood-analytics?bucket=start|end&period=...` returning sessions grouped by mood bucket with net P/L, win rate, ROI, hand win rate
+   - Dashboard "Mood × Result" card with start/end toggle
+   - Integration test asserts buckets and bucket switching
 7. **Slice E — Trainer depth**
    - Count-drill scenarios (running count / true count)
    - Strategy-deviation scenarios (illustrious 18)
@@ -60,15 +61,15 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] **Strategy content verification** — Seeded scenarios and evaluator outputs locked against an independent reference basic-strategy chart
 - [x] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
 - [x] **Docs template cleanup** — Rewrite architecture, database, deployment, runbook, and style-guide docs around the real app
-- [ ] **Docs + verification slice** — Add a stronger manual smoke-test pass and document it
+- [x] **Docs + verification slice** — Manual smoke-test documented at `docs/SMOKE_TEST.md`
 
 ## Medium Priority
 
 - [x] **Git checkpoints** — Current completed vertical slices have clear checkpoint commits
 - [x] **MD handoff cadence** — `.shared/context/*.md` and key docs refreshed after the Slice B milestone
 - [x] **Budget ring logic** — Monthly budget setting per user; `% used`, `days left`, `net P/L` computed server-side
-- [ ] **Mood × result analytics** — Aggregate stored pre/post session mood for dashboard insight
-- [ ] **Session limits + break mode UI** — Surface `limitState` reflection prompt and `/users/me/break` controls in `public/` (API/service already shipped)
+- [x] **Mood × result analytics** — `/users/me/mood-analytics` endpoint + dashboard widget
+- [x] **Session limits + break mode UI** — Reflection banner on active session focus card; break controls in profile
 
 ## Low Priority
 
@@ -111,7 +112,7 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Dashboard shell + responsive overview UI in the web app
 - [x] Period-based stats
 - [x] Budget ring computation
-- [ ] Mood × result aggregation
+- [x] Mood × result aggregation
 - [x] Per-casino breakdown
 
 ### Phase 4 — Learn Core
@@ -155,3 +156,6 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Slice C1 account lifecycle complete: password change, credential-safe JSON export, delete account cascade, profile UI controls, API docs, and integration coverage — 2026-05-15
 - [x] Slice C2 strategy content verification complete: independent reference chart, 350-cell coverage, high-risk decision suite, evaluator agreement — 2026-05-15
 - [x] Slice C session limits + break mode complete (API/service): per-session loss/time limits, computed limitState, 24h/7d/30d break blocking session creation, unit + integration coverage — 2026-05-15
+- [x] Slice D mood × result analytics complete: aggregation endpoint with start/end bucket toggle, dashboard widget, integration coverage — 2026-05-15
+- [x] Session limits + break mode UI complete: loss/time limit fields on session create, live reflection banner on dashboard focus card, break controls in profile — 2026-05-15
+- [x] Manual smoke-test documented at `docs/SMOKE_TEST.md` — 2026-05-15

@@ -26,6 +26,9 @@ const state = {
   stats: null,
   budget: null,
   budgetFormOpen: false,
+  moodAnalytics: null,
+  moodAnalyticsBucket: "start",
+  breakState: null,
   statsPeriod: "all",
   sessions: [],
   selectedSessionId: null,
@@ -122,6 +125,8 @@ async function hydrateApp() {
     state.stats = null;
     state.budget = null;
     state.budgetFormOpen = false;
+    state.moodAnalytics = null;
+    state.breakState = null;
     state.sessions = [];
     state.selectedSessionId = null;
     state.selectedSession = null;
@@ -141,6 +146,12 @@ async function hydrateApp() {
       }),
       loadBudget(false).catch(() => {
         state.budget = null;
+      }),
+      loadMoodAnalytics(false).catch(() => {
+        state.moodAnalytics = null;
+      }),
+      loadBreakState(false).catch(() => {
+        state.breakState = null;
       }),
       api("/sessions").then((sessions) => {
         state.sessions = sessions?.data ?? [];
@@ -427,6 +438,7 @@ function renderDashboardView() {
               <h3>${escapeHtml(activeSession.casinoName)}</h3>
               <p>${formatDateTime(activeSession.startedAt)} · ${activeSession.decks}-deck table · ${formatMoney(activeSession.tableMin)} minimum</p>
               ${renderSessionMetadata(activeSession)}
+              ${renderLimitReflection(activeSession.limitState)}
               <div class="detail-grid compact">
                 ${renderDetailStat("Buy-In", formatMoney(activeSession.buyIn))}
                 ${renderDetailStat("Live P/L", formatMoney(activeSession.liveNetProfit ?? 0), toneClass(activeSession.liveNetProfit ?? 0))}
@@ -511,6 +523,7 @@ function renderDashboardView() {
       </article>
     </section>
     <section class="sessions-grid dashboard-lower-grid">
+      ${renderMoodAnalyticsCard()}
       <article class="session-card">
         <div class="section-head">
           <div>
@@ -541,6 +554,95 @@ function renderDashboardView() {
         </p>
       </article>
     </section>
+  `;
+}
+
+function renderLimitReflection(limitState) {
+  if (!limitState || (!limitState.lossLimitCents && !limitState.timeLimitMinutes)) return "";
+  const lossPart = limitState.lossLimitCents
+    ? `Loss ${formatMoney(limitState.netLossCents)} / ${formatMoney(limitState.lossLimitCents)}`
+    : "";
+  const timePart = limitState.timeLimitMinutes
+    ? `Time ${limitState.elapsedMinutes}m / ${limitState.timeLimitMinutes}m`
+    : "";
+  const tone = limitState.anyLimitHit ? "danger" : "muted";
+  const message = limitState.anyLimitHit
+    ? "Limit reached — pause and reflect before the next hand."
+    : "Limit tracking active.";
+  return `
+    <div class="limit-reflection ${tone}">
+      <strong>${escapeHtml(message)}</strong>
+      <div class="helper">${[lossPart, timePart].filter(Boolean).join(" · ")}</div>
+    </div>
+  `;
+}
+
+function renderBreakCard() {
+  const breakState = state.breakState;
+  const active = breakState?.active;
+  const until = breakState?.breakUntil;
+  return `
+    <article class="profile-card">
+      <div class="section-head">
+        <div>
+          <h2>Responsible Play Break</h2>
+          <p>${active ? `Break active until ${formatDateTime(until)}. New sessions blocked.` : "Block new session creation for 24h, 7d, or 30d."}</p>
+        </div>
+        ${active ? `<span class="pill gold">Active</span>` : ""}
+      </div>
+      <div class="toolbar">
+        ${active
+          ? `<button class="subtle-btn danger" data-action="clear-break">Clear break</button>`
+          : `
+            <button class="ghost-btn" data-action="set-break" data-duration="24h">24 hours</button>
+            <button class="ghost-btn" data-action="set-break" data-duration="7d">7 days</button>
+            <button class="ghost-btn" data-action="set-break" data-duration="30d">30 days</button>
+          `}
+      </div>
+    </article>
+  `;
+}
+
+function renderMoodAnalyticsCard() {
+  const data = state.moodAnalytics;
+  const buckets = data?.buckets ?? [];
+  const bucketKey = state.moodAnalyticsBucket;
+  return `
+    <article class="profile-card">
+      <div class="section-head">
+        <div>
+          <h2>Mood × Result</h2>
+          <p>Net P/L and win rate grouped by ${bucketKey === "end" ? "ending" : "starting"} mood across completed sessions.</p>
+        </div>
+        <div class="period-tabs">
+          <button class="tab-btn ${bucketKey === "start" ? "active" : ""}" data-action="set-mood-bucket" data-bucket="start">Start</button>
+          <button class="tab-btn ${bucketKey === "end" ? "active" : ""}" data-action="set-mood-bucket" data-bucket="end">End</button>
+        </div>
+      </div>
+      ${buckets.length
+        ? `<div class="session-list">${buckets.map(renderMoodBucketRow).join("")}</div>`
+        : renderEmptyCard("No mood-tagged sessions yet", "Log starting and ending mood on completed sessions to build this view.")}
+    </article>
+  `;
+}
+
+function renderMoodBucketRow(bucket) {
+  const moodLabel = bucket.mood === null ? "No mood set" : formatMood(bucket.mood) || `Mood ${bucket.mood}`;
+  return `
+    <div class="session-row">
+      <div class="row-top">
+        <div>
+          <div class="session-title">${escapeHtml(moodLabel)}</div>
+          <div class="helper">${formatCount(bucket.sessions)} sessions · win rate ${formatPercent(bucket.sessionWinRate)}</div>
+        </div>
+        <strong class="${toneClass(bucket.netProfit)}">${formatMoney(bucket.netProfit)}</strong>
+      </div>
+      <div class="row-bottom">
+        <span>Avg net ${formatMoney(bucket.averageNet)}</span>
+        <span>ROI ${formatPercent(bucket.roi)}</span>
+        <span>Hand win ${formatPercent(bucket.handWinRate)}</span>
+      </div>
+    </div>
   `;
 }
 
@@ -836,6 +938,7 @@ function renderProfileView() {
           ${renderDetailStat("Hands Won", formatCount(state.stats?.handsWon))}
         </div>
       </article>
+      ${renderBreakCard()}
       <article class="profile-card">
         <div class="section-head">
           <div>
@@ -1130,6 +1233,14 @@ function renderSessionCreateForm() {
             <option value="">Not set</option>
             ${renderMoodOptions()}
           </select>
+        </div>
+        <div class="field">
+          <label for="session-loss-limit">Loss Limit ($)</label>
+          <input id="session-loss-limit" name="lossLimitDollars" type="number" min="0" step="1" placeholder="optional" />
+        </div>
+        <div class="field">
+          <label for="session-time-limit">Time Limit (min)</label>
+          <input id="session-time-limit" name="timeLimitMinutes" type="number" min="0" step="1" placeholder="optional" />
         </div>
       </div>
       <div class="field">
@@ -1609,6 +1720,25 @@ async function onActionClick(event) {
     return;
   }
 
+  if (action === "set-break") {
+    await setBreak(event.currentTarget.dataset.duration);
+    return;
+  }
+
+  if (action === "clear-break") {
+    await clearBreak();
+    return;
+  }
+
+  if (action === "set-mood-bucket") {
+    const bucket = event.currentTarget.dataset.bucket;
+    if (bucket && bucket !== state.moodAnalyticsBucket) {
+      state.moodAnalyticsBucket = bucket;
+      await loadMoodAnalytics();
+    }
+    return;
+  }
+
   if (action === "dismiss-notice") {
     state.notices.splice(Number(event.currentTarget.dataset.index), 1);
     render();
@@ -1768,6 +1898,8 @@ async function createSession(formData) {
     notes: String(formData.get("notes") || "").trim() || undefined,
     tags: parseSessionTags(formData),
     moodStart: moodStart || undefined,
+    lossLimitCents: dollarsToCents(formData.get("lossLimitDollars")) || undefined,
+    timeLimitMinutes: optionalNumber(formData.get("timeLimitMinutes")) || undefined,
   };
 
   const data = await api("/sessions", {
@@ -1980,6 +2112,53 @@ async function loadBudget(shouldRender = true) {
   } finally {
     state.loading.budget = false;
     if (shouldRender) paintBudgetCard();
+  }
+}
+
+async function loadMoodAnalytics(shouldRender = true) {
+  try {
+    state.moodAnalytics = await api(
+      `/users/me/mood-analytics?bucket=${state.moodAnalyticsBucket}`
+    );
+    if (shouldRender) render();
+    return state.moodAnalytics;
+  } catch (error) {
+    if (shouldRender) addNotice(error.message || "Could not load mood analytics.", "error");
+    throw error;
+  }
+}
+
+async function loadBreakState(shouldRender = true) {
+  try {
+    state.breakState = await api("/users/me/break");
+    if (shouldRender) render();
+    return state.breakState;
+  } catch (error) {
+    if (shouldRender) addNotice(error.message || "Could not load break state.", "error");
+    throw error;
+  }
+}
+
+async function setBreak(duration) {
+  try {
+    state.breakState = await api("/users/me/break", {
+      method: "PUT",
+      body: JSON.stringify({ duration }),
+    });
+    addNotice(`Responsible-play break (${duration}) started.`, "success");
+    render();
+  } catch (error) {
+    addNotice(error.message || "Could not start break.", "error");
+  }
+}
+
+async function clearBreak() {
+  try {
+    state.breakState = await api("/users/me/break", { method: "DELETE" });
+    addNotice("Break cleared.", "success");
+    render();
+  } catch (error) {
+    addNotice(error.message || "Could not clear break.", "error");
   }
 }
 

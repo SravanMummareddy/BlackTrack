@@ -391,9 +391,59 @@ Response `200`:
 }
 ```
 
+### `GET /users/me/mood-analytics`
+
+Aggregates completed sessions by mood bucket. Query params:
+
+- `period` — `all` (default), `year`, `month`, `week`
+- `bucket` — `start` (default, groups by `moodStart`) or `end` (groups by `moodEnd`)
+
+Response `200`:
+
+```json
+{
+  "data": {
+    "period": "all",
+    "bucket": "start",
+    "windowStart": null,
+    "totalCompletedSessions": 12,
+    "buckets": [
+      {
+        "mood": 4,
+        "sessions": 5,
+        "netProfit": 18500,
+        "totalBuyIn": 150000,
+        "averageNet": 3700,
+        "sessionWinRate": 0.6,
+        "handWinRate": 0.48,
+        "roi": 0.12
+      }
+    ]
+  }
+}
+```
+
+`mood` is `null` for sessions with no mood recorded.
+
+### `GET /users/me/break`
+
+Returns the responsible-play break state. Response `200`:
+
+```json
+{ "data": { "active": false, "breakUntil": null } }
+```
+
+### `PUT /users/me/break`
+
+Request: `{ "duration": "24h" | "7d" | "30d" }`. Starts a break; new session creation is blocked with `403` until it expires.
+
+### `DELETE /users/me/break`
+
+Clears the active break.
+
 ## Sessions
 
-Money fields are integer cents.
+Money fields are integer cents. Sessions accept optional `lossLimitCents` and `timeLimitMinutes`; every session payload includes a computed `limitState` with `netLossCents`, `elapsedMinutes`, and `anyLimitHit`.
 
 ### `POST /sessions`
 

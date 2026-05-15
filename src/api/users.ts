@@ -33,6 +33,11 @@ const statsQuerySchema = z.object({
   period: z.enum(['all', 'year', 'month', 'week']).default('all'),
 });
 
+const moodAnalyticsQuerySchema = z.object({
+  period: z.enum(['all', 'year', 'month', 'week']).default('all'),
+  bucket: z.enum(['start', 'end']).default('start'),
+});
+
 const setBreakSchema = z.object({
   duration: z.enum(['24h', '7d', '30d']),
 });
@@ -240,6 +245,89 @@ router.get('/me/stats', asyncHandler(async (req: Request, res: Response) => {
       totalPayout: handAggregate._sum.payout ?? 0,
       averageBet: handAggregate._avg.bet === null ? null : Math.round(handAggregate._avg.bet),
       topCasinos,
+    },
+  });
+}));
+
+router.get('/me/mood-analytics', asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.userId!;
+  const { period, bucket } = parseQuery(moodAnalyticsQuerySchema, req.query);
+  const startedAtFilter = getPeriodStart(period);
+  const sessionWhere = {
+    userId,
+    cashOut: { not: null },
+    ...(startedAtFilter ? { startedAt: { gte: startedAtFilter } } : {}),
+  };
+
+  const sessions = await prisma.casinoSession.findMany({
+    where: sessionWhere,
+    select: {
+      id: true,
+      buyIn: true,
+      cashOut: true,
+      moodStart: true,
+      moodEnd: true,
+      handsPlayed: true,
+      handsWon: true,
+    },
+  });
+
+  const buckets = new Map<number | 'none', {
+    mood: number | null;
+    sessions: number;
+    netProfit: number;
+    totalBuyIn: number;
+    sessionsWon: number;
+    handsPlayed: number;
+    handsWon: number;
+  }>();
+
+  for (const session of sessions) {
+    const moodValue = bucket === 'end' ? session.moodEnd : session.moodStart;
+    const key: number | 'none' = moodValue ?? 'none';
+    const existing = buckets.get(key) ?? {
+      mood: typeof key === 'number' ? key : null,
+      sessions: 0,
+      netProfit: 0,
+      totalBuyIn: 0,
+      sessionsWon: 0,
+      handsPlayed: 0,
+      handsWon: 0,
+    };
+    const net = (session.cashOut ?? 0) - session.buyIn;
+    existing.sessions += 1;
+    existing.netProfit += net;
+    existing.totalBuyIn += session.buyIn;
+    existing.sessionsWon += net > 0 ? 1 : 0;
+    existing.handsPlayed += session.handsPlayed;
+    existing.handsWon += session.handsWon;
+    buckets.set(key, existing);
+  }
+
+  const data = Array.from(buckets.values())
+    .map((entry) => ({
+      mood: entry.mood,
+      sessions: entry.sessions,
+      netProfit: entry.netProfit,
+      totalBuyIn: entry.totalBuyIn,
+      averageNet: entry.sessions > 0 ? Math.round(entry.netProfit / entry.sessions) : 0,
+      sessionWinRate: entry.sessions > 0 ? entry.sessionsWon / entry.sessions : null,
+      handWinRate: entry.handsPlayed > 0 ? entry.handsWon / entry.handsPlayed : null,
+      roi: entry.totalBuyIn > 0 ? entry.netProfit / entry.totalBuyIn : null,
+    }))
+    .sort((a, b) => {
+      if (a.mood === null) return 1;
+      if (b.mood === null) return -1;
+      return a.mood - b.mood;
+    });
+
+  res.status(200).json({
+    data: {
+      period,
+      bucket,
+      windowStart: startedAtFilter?.toISOString() ?? null,
+      totalCompletedSessions: sessions.length,
+      buckets: data,
     },
   });
 }));
