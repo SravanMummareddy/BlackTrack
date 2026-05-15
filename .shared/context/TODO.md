@@ -10,21 +10,30 @@ We are in development phase. Ship every slice end-to-end (schema → API → UI 
    - Monthly budget setting on user profile
    - `% used`, `days left`, `net P/L` computed server-side from sessions in the current month
    - Dashboard ring widget + warning state when nearing/over budget
-2. **Slice C — Session limits + break mode**
+2. **Slice C0 — Baseline correction features** (complete)
+   - Edit and delete hand logs
+   - Edit, delete, and reopen sessions
+   - Active-session live P/L computed from logged hand payouts
+3. **Slice C1 — Account lifecycle**
+   - Change password
+   - Export account/session/hand/trainer data as JSON
+   - Delete account with cascade cleanup
+4. **Slice C2 — Strategy content verification**
+   - Confirm seeded scenarios and evaluator outputs against reference basic-strategy chart
+   - Add automated coverage for high-risk hard/soft/pair decisions
+5. **Slice C — Session limits + break mode**
    - Per-session loss limit, time limit (set at session create)
    - Reflection prompt when limits are hit; option to end or extend
    - 24h / 7d / 30d break mode that blocks new session creation
-3. **Slice D — Mood × result analytics**
+6. **Slice D — Mood × result analytics**
    - Aggregation endpoint returning sessions grouped by mood bucket with net P/L and win rate
    - Dashboard scatter / grouped-bar widget
-4. **Slice E — Trainer depth**
+7. **Slice E — Trainer depth**
    - Count-drill scenarios (running count / true count)
    - Strategy-deviation scenarios (illustrious 18)
    - Difficulty slider in trainer
-5. **Slice F — Profile / account management**
-   - Change password, export data (JSON), delete account
-6. **Slice G — Strategy content verification**
-   - Confirm seeded scenarios + evaluator against reference basic-strategy chart
+8. **Slice F — Learning baseline**
+   - Learn hub with lesson, flashcard, and quiz foundation
 
 Each slice ends with: typecheck pass, integration test added or updated, commit, doc refresh.
 
@@ -41,6 +50,8 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] **Analytics aggregations** — Period-based stats and per-casino dashboard breakdowns
 - [x] **Strategy progression features** — Streaks and review resurfacing
 - [x] **Session metadata** — Tags, pre/post session mood, and completion notes in API + web app
+- [x] **Baseline correction features** — Edit/delete hands, edit/delete/reopen sessions, and show active-session live P/L
+- [ ] **Account lifecycle** — Change password, export JSON, and delete account
 - [ ] **Strategy content verification** — Confirm seeded scenarios and evaluator outputs against a reference basic-strategy chart
 - [x] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
 - [x] **Docs template cleanup** — Rewrite architecture, database, deployment, runbook, and style-guide docs around the real app
@@ -82,6 +93,9 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 ### Phase 2 — Track Core
 - [x] Session CRUD
 - [x] Hand logging nested under sessions
+- [x] Hand edit/delete correction flow
+- [x] Session edit/delete/reopen UI flow
+- [x] Active-session live P/L
 - [x] Session-level hand stats
 - [x] Responsive session workspace in the web app
 - [x] Tags + mood
@@ -131,3 +145,4 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Session metadata slice complete: tags, pre/post mood, completion notes, API docs, and integration assertions added — 2026-05-15
 - [x] Slice B budget ring complete: monthly budget settings, computed current-month budget view, dashboard ring widget, API docs, unit tests, and integration tests — 2026-05-15
 - [x] Slice B merge handoff complete: shared context refreshed for merge/push and next slice set to session limits + break mode — 2026-05-15
+- [x] Slice C0 baseline correction complete: hand edit/delete, session edit/delete/reopen, live active-session P/L, API docs, and integration coverage — 2026-05-15

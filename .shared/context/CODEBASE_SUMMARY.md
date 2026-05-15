@@ -65,6 +65,7 @@ Current status of `public/`:
 - auth shell is wired to the live API
 - dashboard shell hydrates from `/users/me`, `/users/me/stats`, `/sessions`, and `/strategy/progress`
 - sessions workspace now supports selection, create session, complete session, and hand logging against the live API
+- sessions workspace now supports correction flows: edit/delete/reopen sessions, edit/delete hands, and active-session live P/L
 - trainer workspace now supports auto-loading scenarios, attempt submission, live progress metrics, next-hand flow, and a responsive reference sidebar
 - trainer progress now includes streaks plus a mistakes review queue with direct scenario reloads
 - dashboard now includes active-session focus, quick actions, and improved desktop/tablet composition
@@ -73,7 +74,7 @@ Current status of `public/`:
 - `README.md`, `docs/API.md`, and the core architecture/operations docs now describe the real app
 - baseline API integration coverage now exists in `tests/integration/api.integration.test.ts`
 - core docs now describe the real app instead of generic templates
-- next major slice is session limits plus break mode
+- next major slice is C1 account lifecycle controls before responsible-play enhancements
 
 ---
 

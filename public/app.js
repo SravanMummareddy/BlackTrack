@@ -32,6 +32,7 @@ const state = {
   selectedSession: null,
   sessionHands: [],
   sessionStats: null,
+  editingHandId: null,
   trainerScenario: null,
   trainerProgress: null,
   trainerFeedback: null,
@@ -428,6 +429,7 @@ function renderDashboardView() {
               ${renderSessionMetadata(activeSession)}
               <div class="detail-grid compact">
                 ${renderDetailStat("Buy-In", formatMoney(activeSession.buyIn))}
+                ${renderDetailStat("Live P/L", formatMoney(activeSession.liveNetProfit ?? 0), toneClass(activeSession.liveNetProfit ?? 0))}
                 ${renderDetailStat("Hands", formatCount(activeSession.handsPlayed))}
               </div>
               <div class="toolbar">
@@ -628,6 +630,7 @@ function renderSessionsView() {
 function renderSessionDetail() {
   const session = state.selectedSession;
   const netProfit = session.cashOut === null ? null : session.cashOut - session.buyIn;
+  const liveNetProfit = session.liveNetProfit ?? state.sessionStats?.liveNetProfit ?? 0;
   return `
     <div class="section-head">
       <div>
@@ -636,7 +639,9 @@ function renderSessionDetail() {
       </div>
       <div class="toolbar">
         <span class="pill ${session.status === "ACTIVE" ? "gold" : "success"}">${session.status}</span>
-        <button class="ghost-btn" data-action="open-modal" data-modal="hand-log">Log hand</button>
+        <button class="ghost-btn" data-action="open-modal" data-modal="session-edit">Edit</button>
+        ${session.status === "COMPLETED" ? `<button class="ghost-btn" data-action="reopen-session">Reopen</button>` : `<button class="ghost-btn" data-action="open-modal" data-modal="hand-log">Log hand</button>`}
+        <button class="subtle-btn danger" data-action="delete-session">Delete</button>
       </div>
     </div>
     <div class="detail-grid">
@@ -644,6 +649,7 @@ function renderSessionDetail() {
       ${renderDetailStat("Cash-Out", session.cashOut === null ? "Open" : formatMoney(session.cashOut), toneClass(netProfit))}
       ${renderDetailStat("Table Range", `${formatMoney(session.tableMin)} - ${formatMoney(session.tableMax)}`)}
       ${renderDetailStat("Net Profit", netProfit === null ? "Pending" : formatMoney(netProfit), toneClass(netProfit))}
+      ${renderDetailStat("Live P/L", formatMoney(liveNetProfit), toneClass(liveNetProfit))}
       ${renderDetailStat("Hands Played", formatCount(state.sessionStats?.handsPlayed ?? session.handsPlayed))}
       ${renderDetailStat("Win Rate", formatPercent(state.sessionStats?.winRate))}
     </div>
@@ -917,7 +923,7 @@ function renderSessionTags(tags = []) {
 }
 
 function renderSessionRow(session) {
-  const netProfit = session.netProfit;
+  const visibleProfit = session.status === "ACTIVE" ? session.liveNetProfit : session.netProfit;
   return `
     <button class="session-row ${session.id === state.selectedSessionId ? "active" : ""}" data-action="select-session" data-session-id="${session.id}">
       <div class="row-top">
@@ -930,7 +936,7 @@ function renderSessionRow(session) {
       <div class="row-bottom">
         <span>${formatMoney(session.buyIn)} buy-in</span>
         <span>${formatMood(session.moodStart) || "Mood open"}</span>
-        <strong class="${toneClass(netProfit)}">${netProfit === null ? "Open" : formatMoney(netProfit)}</strong>
+        <strong class="${toneClass(visibleProfit)}">${session.status === "ACTIVE" ? `Live ${formatMoney(visibleProfit ?? 0)}` : formatMoney(visibleProfit)}</strong>
       </div>
       ${renderSessionTags(session.tags)}
     </button>
@@ -969,6 +975,10 @@ function renderHandRow(hand) {
       <div class="row-bottom">
         <span>Bet ${formatMoney(hand.bet)}</span>
         <span>Total ${hand.playerTotal} vs ${hand.dealerTotal}</span>
+        <span class="row-actions">
+          <button class="subtle-btn" data-action="edit-hand" data-hand-id="${hand.id}">Edit</button>
+          <button class="subtle-btn danger" data-action="delete-hand" data-hand-id="${hand.id}">Delete</button>
+        </span>
       </div>
     </div>
   `;
@@ -1027,10 +1037,17 @@ function renderEmptyCard(title, copy) {
 function renderModals() {
   return `
     ${renderModal("session-create", "Create a Session", "Log the table conditions before you sit down.", renderSessionCreateForm())}
+    ${renderModal("session-edit", "Edit Session", "Correct table details, buy-in, tags, mood, or notes.", renderSessionEditForm())}
     ${renderModal("session-complete", "Complete Session", "Close out the session with a final cash-out value.", renderCompleteSessionForm())}
     ${renderModal("hand-log", "Log a Hand", "Capture bet sizing, outcome, cards, and payout in cents.", renderHandForm())}
+    ${renderModal("hand-edit", "Edit Hand", "Correct a logged hand and refresh session totals.", renderHandForm(getEditingHand(), "edit-hand", "hand-edit"))}
     ${renderModal("profile-edit", "Edit Profile", "Update the basics tied to your account.", renderProfileForm())}
   `;
+}
+
+function getEditingHand() {
+  if (!state.editingHandId) return null;
+  return state.sessionHands.find((hand) => hand.id === state.editingHandId) ?? null;
 }
 
 function renderModal(id, title, copy, body) {
@@ -1117,6 +1134,59 @@ function renderSessionCreateForm() {
   `;
 }
 
+function renderSessionEditForm() {
+  const session = state.selectedSession;
+  if (!session) return renderEmptyCard("No session selected", "Choose a session before editing details.");
+  return `
+    <form class="surface-form" data-form="update-session">
+      <div class="field-grid">
+        <div class="field">
+          <label for="session-edit-casino">Casino</label>
+          <input id="session-edit-casino" name="casinoName" type="text" value="${escapeHtml(session.casinoName ?? "")}" required />
+        </div>
+        <div class="field">
+          <label for="session-edit-decks">Decks</label>
+          <input id="session-edit-decks" name="decks" type="number" min="1" value="${escapeHtml(String(session.decks ?? 6))}" required />
+        </div>
+        <div class="field">
+          <label for="session-edit-min">Table Min ($)</label>
+          <input id="session-edit-min" name="tableMin" type="number" min="0" step="1" value="${Math.round((session.tableMin ?? 0) / 100)}" required />
+        </div>
+        <div class="field">
+          <label for="session-edit-max">Table Max ($)</label>
+          <input id="session-edit-max" name="tableMax" type="number" min="0" step="1" value="${Math.round((session.tableMax ?? 0) / 100)}" required />
+        </div>
+        <div class="field">
+          <label for="session-edit-buyin">Buy-In ($)</label>
+          <input id="session-edit-buyin" name="buyIn" type="number" min="0" step="1" value="${Math.round((session.buyIn ?? 0) / 100)}" required />
+        </div>
+        <div class="field">
+          <label for="session-edit-mood-start">Starting Mood</label>
+          <select id="session-edit-mood-start" name="moodStart">
+            <option value="">Not set</option>
+            ${renderMoodOptions(session.moodStart)}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Session Tags</label>
+        <div class="metadata-picker">
+          ${renderTagCheckboxes(session.tags)}
+        </div>
+      </div>
+      <div class="field">
+        <label for="session-edit-custom-tags">Custom Tags</label>
+        <input id="session-edit-custom-tags" name="customTags" type="text" placeholder="solo table, late shoe" />
+      </div>
+      <div class="field">
+        <label for="session-edit-notes">Notes</label>
+        <textarea id="session-edit-notes" name="notes">${escapeHtml(session.notes ?? "")}</textarea>
+      </div>
+      <button class="primary-btn" type="submit">Save session</button>
+    </form>
+  `;
+}
+
 function renderCompleteSessionForm() {
   return `
     <form class="surface-form" data-form="complete-session">
@@ -1140,59 +1210,56 @@ function renderCompleteSessionForm() {
   `;
 }
 
-function renderHandForm() {
+function renderHandForm(hand = null, formName = "log-hand", prefix = "hand") {
+  const actionLabel = formName === "edit-hand" ? "Save changes" : "Save hand";
   return `
-    <form class="surface-form" data-form="log-hand">
+    <form class="surface-form" data-form="${formName}">
       <div class="field-grid">
         <div class="field">
-          <label for="hand-bet">Bet ($)</label>
-          <input id="hand-bet" name="bet" type="number" min="0" step="1" required />
+          <label for="${prefix}-bet">Bet ($)</label>
+          <input id="${prefix}-bet" name="bet" type="number" min="0" step="1" value="${hand ? Math.round((hand.bet ?? 0) / 100) : ""}" required />
         </div>
         <div class="field">
-          <label for="hand-result">Result</label>
-          <select id="hand-result" name="result">
-            <option>WIN</option>
-            <option>LOSS</option>
-            <option>PUSH</option>
-            <option>BLACKJACK</option>
-            <option>SURRENDER</option>
+          <label for="${prefix}-result">Result</label>
+          <select id="${prefix}-result" name="result">
+            ${["WIN", "LOSS", "PUSH", "BLACKJACK", "SURRENDER"].map((result) => `<option ${hand?.result === result ? "selected" : ""}>${result}</option>`).join("")}
           </select>
         </div>
         <div class="field">
-          <label for="hand-player-total">Player Total</label>
-          <input id="hand-player-total" name="playerTotal" type="number" min="1" max="21" required />
+          <label for="${prefix}-player-total">Player Total</label>
+          <input id="${prefix}-player-total" name="playerTotal" type="number" min="1" max="21" value="${hand?.playerTotal ?? ""}" required />
         </div>
         <div class="field">
-          <label for="hand-dealer-total">Dealer Total</label>
-          <input id="hand-dealer-total" name="dealerTotal" type="number" min="1" max="21" required />
+          <label for="${prefix}-dealer-total">Dealer Total</label>
+          <input id="${prefix}-dealer-total" name="dealerTotal" type="number" min="1" max="31" value="${hand?.dealerTotal ?? ""}" required />
         </div>
         <div class="field">
-          <label for="hand-payout">Payout ($ net)</label>
-          <input id="hand-payout" name="payout" type="number" step="1" required />
+          <label for="${prefix}-payout">Payout ($ net)</label>
+          <input id="${prefix}-payout" name="payout" type="number" step="1" value="${hand ? Math.round((hand.payout ?? 0) / 100) : ""}" required />
         </div>
       </div>
       <div class="field-grid">
         <div class="field">
-          <label for="hand-player-cards">Player Cards</label>
-          <input id="hand-player-cards" name="playerCards" type="text" placeholder="A,K" required />
+          <label for="${prefix}-player-cards">Player Cards</label>
+          <input id="${prefix}-player-cards" name="playerCards" type="text" placeholder="A,K" value="${escapeHtml(hand?.playerCards?.join(",") ?? "")}" required />
         </div>
         <div class="field">
-          <label for="hand-dealer-cards">Dealer Cards</label>
-          <input id="hand-dealer-cards" name="dealerCards" type="text" placeholder="9,7" required />
+          <label for="${prefix}-dealer-cards">Dealer Cards</label>
+          <input id="${prefix}-dealer-cards" name="dealerCards" type="text" placeholder="9,7" value="${escapeHtml(hand?.dealerCards?.join(",") ?? "")}" required />
         </div>
       </div>
       <div class="field-grid">
         <div class="field">
-          <label><input type="checkbox" name="splitHand" /> Split hand</label>
+          <label><input type="checkbox" name="splitHand" ${hand?.splitHand ? "checked" : ""} /> Split hand</label>
         </div>
         <div class="field">
-          <label><input type="checkbox" name="doubled" /> Doubled</label>
+          <label><input type="checkbox" name="doubled" ${hand?.doubled ? "checked" : ""} /> Doubled</label>
         </div>
         <div class="field">
-          <label><input type="checkbox" name="surrendered" /> Surrendered</label>
+          <label><input type="checkbox" name="surrendered" ${hand?.surrendered ? "checked" : ""} /> Surrendered</label>
         </div>
       </div>
-      <button class="primary-btn" type="submit">Save hand</button>
+      <button class="primary-btn" type="submit">${actionLabel}</button>
     </form>
   `;
 }
@@ -1383,6 +1450,13 @@ async function onActionClick(event) {
     return;
   }
 
+  if (action === "edit-hand") {
+    state.editingHandId = event.currentTarget.dataset.handId;
+    render();
+    openModal("hand-edit");
+    return;
+  }
+
   if (action === "close-modal") {
     closeModal(event.currentTarget.dataset.modal);
     return;
@@ -1429,6 +1503,21 @@ async function onActionClick(event) {
     render();
     await loadSessionDetails(sessionId);
     openModal("hand-log");
+    return;
+  }
+
+  if (action === "reopen-session") {
+    await reopenSession();
+    return;
+  }
+
+  if (action === "delete-session") {
+    await deleteSelectedSession();
+    return;
+  }
+
+  if (action === "delete-hand") {
+    await deleteHand(event.currentTarget.dataset.handId);
     return;
   }
 
@@ -1488,9 +1577,21 @@ async function onFormSubmit(event) {
       return;
     }
 
+    if (formName === "update-session") {
+      await updateSession(formData);
+      closeModal("session-edit");
+      return;
+    }
+
     if (formName === "log-hand") {
       await logHand(formData);
       closeModal("hand-log");
+      return;
+    }
+
+    if (formName === "edit-hand") {
+      await updateHand(formData);
+      closeModal("hand-edit");
       return;
     }
 
@@ -1570,6 +1671,7 @@ async function logoutUser() {
   state.selectedSession = null;
   state.sessionHands = [];
   state.sessionStats = null;
+  state.editingHandId = null;
   state.trainerProgress = null;
   state.trainerScenario = null;
   state.trainerFeedback = null;
@@ -1629,23 +1731,70 @@ async function completeSession(formData) {
   await hydrateApp();
 }
 
+async function updateSession(formData) {
+  if (!state.selectedSessionId) {
+    throw new Error("Choose a session first.");
+  }
+
+  const moodStart = optionalNumber(formData.get("moodStart"));
+  const payload = {
+    casinoName: String(formData.get("casinoName") || "").trim(),
+    tableMin: dollarsToCents(formData.get("tableMin")),
+    tableMax: dollarsToCents(formData.get("tableMax")),
+    decks: Number(formData.get("decks")),
+    buyIn: dollarsToCents(formData.get("buyIn")),
+    notes: String(formData.get("notes") || "").trim() || undefined,
+    tags: parseSessionTags(formData),
+    moodStart: moodStart || undefined,
+  };
+
+  await api(`/sessions/${state.selectedSessionId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+
+  addNotice("Session updated.", "success");
+  await hydrateApp();
+  state.currentView = "sessions";
+}
+
+async function reopenSession() {
+  if (!state.selectedSessionId) {
+    throw new Error("Choose a session first.");
+  }
+
+  await api(`/sessions/${state.selectedSessionId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "ACTIVE" }),
+  });
+
+  addNotice("Session reopened.", "success");
+  state.currentView = "sessions";
+  await hydrateApp();
+}
+
+async function deleteSelectedSession() {
+  if (!state.selectedSessionId) {
+    throw new Error("Choose a session first.");
+  }
+  if (!window.confirm("Delete this session and all hands? This cannot be undone.")) return;
+
+  await api(`/sessions/${state.selectedSessionId}`, { method: "DELETE" });
+  addNotice("Session deleted.", "success");
+  state.currentView = "sessions";
+  state.selectedSessionId = null;
+  state.selectedSession = null;
+  state.sessionHands = [];
+  state.sessionStats = null;
+  await hydrateApp();
+}
+
 async function logHand(formData) {
   if (!state.selectedSessionId) {
     throw new Error("Choose a session first.");
   }
 
-  const payload = {
-    bet: dollarsToCents(formData.get("bet")),
-    result: String(formData.get("result") || "PUSH"),
-    playerCards: parseCards(formData.get("playerCards")),
-    dealerCards: parseCards(formData.get("dealerCards")),
-    playerTotal: Number(formData.get("playerTotal")),
-    dealerTotal: Number(formData.get("dealerTotal")),
-    payout: dollarsToCents(formData.get("payout")),
-    splitHand: Boolean(formData.get("splitHand")),
-    doubled: Boolean(formData.get("doubled")),
-    surrendered: Boolean(formData.get("surrendered")),
-  };
+  const payload = buildHandPayload(formData);
 
   await api(`/sessions/${state.selectedSessionId}/hands`, {
     method: "POST",
@@ -1661,6 +1810,61 @@ async function logHand(formData) {
   ]);
   state.stats = stats;
   render();
+}
+
+async function updateHand(formData) {
+  if (!state.selectedSessionId || !state.editingHandId) {
+    throw new Error("Choose a hand first.");
+  }
+
+  await api(`/sessions/${state.selectedSessionId}/hands/${state.editingHandId}`, {
+    method: "PATCH",
+    body: JSON.stringify(buildHandPayload(formData)),
+  });
+
+  addNotice("Hand updated.", "success");
+  const sessionId = state.selectedSessionId;
+  state.editingHandId = null;
+  await loadSessionDetails(sessionId);
+  const [stats] = await Promise.all([
+    loadUserStats(state.statsPeriod, false),
+    loadBudget(false).catch(() => null),
+  ]);
+  state.stats = stats;
+  render();
+}
+
+async function deleteHand(handId) {
+  if (!state.selectedSessionId || !handId) {
+    throw new Error("Choose a hand first.");
+  }
+  if (!window.confirm("Delete this hand from the session history?")) return;
+
+  await api(`/sessions/${state.selectedSessionId}/hands/${handId}`, { method: "DELETE" });
+  addNotice("Hand deleted.", "success");
+  const sessionId = state.selectedSessionId;
+  await loadSessionDetails(sessionId);
+  const [stats] = await Promise.all([
+    loadUserStats(state.statsPeriod, false),
+    loadBudget(false).catch(() => null),
+  ]);
+  state.stats = stats;
+  render();
+}
+
+function buildHandPayload(formData) {
+  return {
+    bet: dollarsToCents(formData.get("bet")),
+    result: String(formData.get("result") || "PUSH"),
+    playerCards: parseCards(formData.get("playerCards")),
+    dealerCards: parseCards(formData.get("dealerCards")),
+    playerTotal: Number(formData.get("playerTotal")),
+    dealerTotal: Number(formData.get("dealerTotal")),
+    payout: dollarsToCents(formData.get("payout")),
+    splitHand: Boolean(formData.get("splitHand")),
+    doubled: Boolean(formData.get("doubled")),
+    surrendered: Boolean(formData.get("surrendered")),
+  };
 }
 
 async function loadUserStats(period = state.statsPeriod, shouldRender = true) {
@@ -1855,6 +2059,9 @@ function openModal(name) {
 
 function closeModal(name) {
   document.querySelector(`[data-modal="${name}"]`)?.classList.remove("open");
+  if (name === "hand-edit") {
+    state.editingHandId = null;
+  }
 }
 
 function primeModal(name) {
@@ -1923,6 +2130,7 @@ async function api(path, init = {}, requireAuth = true, retryOnAuthFailure = tru
       state.selectedSession = null;
       state.sessionHands = [];
       state.sessionStats = null;
+      state.editingHandId = null;
       state.trainerProgress = null;
       state.trainerScenario = null;
       state.trainerFeedback = null;

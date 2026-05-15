@@ -94,6 +94,8 @@ Implemented endpoints:
 - `POST /api/v1/sessions/:sessionId/hands`
 - `GET /api/v1/sessions/:sessionId/hands`
 - `GET /api/v1/sessions/:sessionId/hands/stats`
+- `PATCH /api/v1/sessions/:sessionId/hands/:handId`
+- `DELETE /api/v1/sessions/:sessionId/hands/:handId`
 - `GET /api/v1/users/me`
 - `PATCH /api/v1/users/me`
 - `GET /api/v1/users/me/stats`
@@ -119,10 +121,10 @@ Done:
 - session workspace
 - trainer workspace
 - responsive dashboard/trainer polish
+- hand/session correction flows with active-session live P/L
 
 Still needed:
-- integration tests
-- docs cleanup across the remaining template files
-- deeper analytics
-- streaks and mistakes queue
-- additional product polish
+- account lifecycle controls
+- strategy content verification
+- responsible-play session limits and break mode
+- deeper analytics and learning content

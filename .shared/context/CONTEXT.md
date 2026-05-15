@@ -10,7 +10,7 @@
 Design exploration is complete and the backend is partially operational. Three prototype iterations still live in `design/` (wireframes → prototype → v2), and `design/prototype.html` is the currently accepted visual/interaction reference. The Express/Prisma backend supports auth, sessions, nested hand logging, overall bankroll stats, and strategy training endpoints. A real responsive web app is now being built under `public/`, served by Express, and has working auth, sessions, and trainer slices, but it is not feature-complete yet.
 
 **Branch**: `main` after merging `feat/slice-b-budget-ring`
-**Last completed slice commit**: `c5e38b5 feat(ui): add dashboard budget ring`
+**Last completed slice commit**: `328c0bd chore: fix handoff tooling checks`
 **Environment**: Development — local only
 
 ---
@@ -52,13 +52,19 @@ Design exploration is complete and the backend is partially operational. Three p
   - Monthly budget schema, migration, service helpers, API endpoints, unit tests, and integration tests are in place.
   - Dashboard now loads `/users/me/budget`, renders a monthly net-loss ring with ok/caution/over states, and supports inline budget save/edit.
   - `docs/API.md` documents `GET /users/me/budget`, `PUT /users/me/budget`, and `GET /users/me/budget/history`.
+- [x] Slice C0 baseline correction features (2026-05-15):
+  - Session responses now include `liveNetProfit` from logged hand payouts plus `netProfit` from completed cash-out.
+  - Session PATCH now supports correcting casino name, table min/max, decks, buy-in, notes, tags, and starting mood; completed sessions can be reopened by setting `status: "ACTIVE"`.
+  - Nested hand routes now support `PATCH /sessions/:sessionId/hands/:handId` and `DELETE /sessions/:sessionId/hands/:handId`, with parent session counters recalculated after corrections.
+  - Production UI now exposes edit/delete/reopen session controls, edit/delete hand controls, and active-session live P/L in dashboard/session views.
+  - Express async error handling was added to the touched sessions/hands routers so 404/validation errors flow through the existing error middleware.
 
 ---
 
 ## In Progress
 
 - [ ] Responsive web app implementation in small vertical slices
-- [ ] Slice C — session limits + break mode
+- [ ] Slice C1 — account lifecycle controls
 
 ---
 
@@ -78,6 +84,9 @@ Design exploration is complete and the backend is partially operational. Three p
 - `src/api/users.ts` — added `/me` and `/me/stats`
 - `src/api/budget.ts` — added monthly budget view, upsert, and history endpoints
 - `src/services/budget-service.ts` — budget month math, effective-setting resolver, state classification, monthly aggregation
+- `src/api/hands.ts` — added hand correction routes and async error wrapping
+- `src/services/hand-service.ts` — added hand update/delete and session counter recalculation
+- `src/services/session-service.ts` — added enriched session responses with live P/L and broader session correction fields
 - `src/api/strategy.ts` — added random scenario, attempt submission, and progress endpoints
 - `src/services/strategy-service.ts` — ported strategy tables, evaluation logic, seed payload builder
 - `scripts/seed-strategy.ts` — idempotent seed script based on the shared strategy tables
@@ -108,19 +117,21 @@ Budget run:       2026-05-15 — `node --check public/app.js` passed; `bun run t
 Merge run:        2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; full `bun test` passed with 44 tests / 2957 assertions. `bun run lint` remains blocked because ESLint has no repo config file.
 Handoff run:      2026-05-15 — `bun run handoff` was rerun with DB access; its test phase passed, but the script exited 1 because of unrelated dirty files, `tsc --silent`, missing ESLint config, and schema-validation warnings.
 Tooling run:      2026-05-15 — added ESLint config, removed invalid `--silent` forwarding from `scripts/handoff.sh`, ignored `.tmp-home-config/`, and verified `bun run lint`, `bun run typecheck`, and full `bun test` pass.
+Correction run:   2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; `bun test tests/integration/api.integration.test.ts` passed with 12 tests / 146 assertions; full `bun test` passed with 46 tests / 2994 assertions; `bun run lint` passed.
 ```
 
 ---
 
 ## Next Steps for Incoming Agent
 
-**User direction (2026-05-15)**: still in dev phase — finish feature completeness FIRST, then circle back to browser verification, automated UI tests, and the open `/users/me` investigation. The roadmap below is sequenced; ship each slice end-to-end (schema → API → UI → tests → commit) before starting the next.
+**User direction (2026-05-15)**: before Slice C enhancements, identify and implement missing baseline features inside already-started product areas. Finish feature completeness FIRST, then circle back to browser verification, automated UI tests, and the open `/users/me` investigation. The roadmap below is sequenced; ship each slice end-to-end (API → UI → tests → docs → commit) before starting the next.
 
-1. **Slice C — Session limits + break mode** (next): per-session loss/time limits, reflection prompt, break-mode lockout.
-2. **Slice D — Mood × result analytics**: aggregation endpoint + dashboard widget.
-3. **Slice E — Trainer depth**: count drills, deviation drills, difficulty slider.
-4. **Slice F — Profile management**: change password, export, delete account.
-5. **Slice G — Strategy content verification**.
+1. **Slice C1 — Account lifecycle** (next): change password, export JSON data, delete account.
+2. **Slice C2 — Strategy content verification**: confirm seeded scenarios + evaluator against a reference basic-strategy chart.
+3. **Slice C — Session limits + break mode**: per-session loss/time limits, reflection prompt, break-mode lockout.
+4. **Slice D — Mood × result analytics**: aggregation endpoint + dashboard widget.
+5. **Slice E — Trainer depth**: count drills, deviation drills, difficulty slider.
+6. **Slice F — Learning baseline**: minimal Learn hub, lessons, flashcards, and quiz foundation if the product should prioritize learning depth before analytics polish.
 
 After all slices land:
 - Browser-verify the auth + dashboard UX hardening at 375 / 768 / 1280 px.

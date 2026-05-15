@@ -38,6 +38,8 @@ Current capabilities:
 - store table minimum and maximum in cents
 - store buy-in and final cash-out in cents
 - log individual blackjack hands inside a session
+- correct session details and hand logs after entry mistakes
+- compute active-session live P/L from hand payouts
 - compute session and user bankroll stats
 
 ### Learn
@@ -183,7 +185,7 @@ These ideas appear in older docs or prototypes but are not implemented as produc
 - Next.js
 - Redis-backed session or cache layers
 - multi-game casino ledgers
-- lessons, flashcards, quizzes, or mistakes queue
+- lessons, flashcards, or quizzes
 - responsible-gambling enforcement features
 - CI/CD deployment automation inside the repo
 

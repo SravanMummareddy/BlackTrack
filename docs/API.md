@@ -363,11 +363,13 @@ Response `201`:
     "notes": "Crowded pit, staying disciplined.",
     "tags": ["disciplined", "heads-up"],
     "moodStart": 4,
-    "moodEnd": null,
-    "completionNotes": null,
-    "createdAt": "2026-05-14T20:00:00.000Z",
-    "updatedAt": "2026-05-14T20:00:00.000Z",
-    "handsPlayed": 0,
+  "moodEnd": null,
+  "completionNotes": null,
+  "liveNetProfit": 0,
+  "netProfit": null,
+  "createdAt": "2026-05-14T20:00:00.000Z",
+  "updatedAt": "2026-05-14T20:00:00.000Z",
+  "handsPlayed": 0,
     "handsWon": 0
   }
 }
@@ -390,6 +392,7 @@ Response `200`:
       "moodStart": 4,
       "handsPlayed": 3,
       "handsWon": 1,
+      "liveNetProfit": -7500,
       "netProfit": null
     }
   ],
@@ -412,17 +415,25 @@ Request fields are all optional:
 
 ```json
 {
+  "casinoName": "Bellagio High Limit",
+  "tableMin": 5000,
+  "tableMax": 50000,
+  "decks": 8,
+  "buyIn": 60000,
   "notes": "Left when game quality dipped.",
   "cashOut": 36200,
   "status": "COMPLETED",
   "tags": ["disciplined"],
+  "moodStart": 4,
   "moodEnd": 5,
   "completionNotes": "Stayed patient and left after the planned shoe."
 }
 ```
 
 When `status` becomes `COMPLETED`, `endedAt` is set if it was empty.
+When `status` becomes `ACTIVE`, `endedAt` and `cashOut` are cleared so a completed session can be reopened for correction.
 `tags` accepts up to 8 trimmed tags, each 32 characters or fewer. `moodStart` and `moodEnd` are integers from `1` to `5`.
+Session responses include `liveNetProfit`, computed from logged hand payouts, and `netProfit`, computed from `cashOut - buyIn` only when a session has a cash-out value.
 
 ### `DELETE /sessions/:id`
 
@@ -497,6 +508,7 @@ Response `200`:
     "netProfit": 4800,
     "roi": 0.16,
     "totalBet": 29000,
+    "liveNetProfit": 4800,
     "avgBet": 2416.67,
     "biggestWin": {
       "id": "uuid",
@@ -511,6 +523,32 @@ Response `200`:
 ```
 
 `netProfit` and `roi` are based on session completion state, so they can be `null` for active sessions.
+`liveNetProfit` is based on logged hand payouts and is available while a session is active.
+
+### `PATCH /sessions/:sessionId/hands/:handId`
+
+Corrects a logged hand. Request fields are optional, but at least one field is required.
+
+Request:
+
+```json
+{
+  "result": "WIN",
+  "dealerCards": ["9", "6", "5"],
+  "dealerTotal": 20,
+  "payout": 2500
+}
+```
+
+Response `200`: same hand shape as `POST /sessions/:sessionId/hands`.
+
+After a hand edit, the parent session's cached `handsPlayed` and `handsWon` values are recalculated from the current hand history.
+
+### `DELETE /sessions/:sessionId/hands/:handId`
+
+Deletes a logged hand and recalculates the parent session counters.
+
+Response `204` with no body.
 
 ## Strategy
 

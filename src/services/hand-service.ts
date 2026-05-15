@@ -1,6 +1,7 @@
 import { prisma } from '../database';
-import { ConflictError } from '../utils/errors';
+import { ConflictError, NotFoundError } from '../utils/errors';
 import { getSession } from './session-service';
+import { Prisma } from '@prisma/client';
 import type { Hand } from '@prisma/client';
 
 export interface LogHandInput {
@@ -15,6 +16,8 @@ export interface LogHandInput {
   surrendered?: boolean;
   payout: number;
 }
+
+export type UpdateHandInput = Partial<LogHandInput>;
 
 export interface PaginatedHands {
   data: Hand[];
@@ -33,6 +36,7 @@ export interface SessionStats {
   netProfit: number | null;
   roi: number | null;
   totalBet: number;
+  liveNetProfit: number;
   avgBet: number | null;
   biggestWin: Hand | null;
   biggestLoss: Hand | null;
@@ -82,6 +86,43 @@ export async function logHand(
   return hand;
 }
 
+export async function updateHand(
+  userId: string,
+  sessionId: string,
+  handId: string,
+  input: UpdateHandInput
+): Promise<Hand> {
+  await getSession(userId, sessionId);
+
+  const existing = await prisma.hand.findFirst({ where: { id: handId, sessionId } });
+  if (!existing) throw new NotFoundError('Hand');
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.hand.update({
+      where: { id: handId },
+      data: input,
+    });
+    await recalculateSessionCounters(tx, sessionId);
+    return updated;
+  });
+}
+
+export async function deleteHand(
+  userId: string,
+  sessionId: string,
+  handId: string
+): Promise<void> {
+  await getSession(userId, sessionId);
+
+  const existing = await prisma.hand.findFirst({ where: { id: handId, sessionId } });
+  if (!existing) throw new NotFoundError('Hand');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.hand.delete({ where: { id: handId } });
+    await recalculateSessionCounters(tx, sessionId);
+  });
+}
+
 export async function listHands(
   userId: string,
   sessionId: string,
@@ -128,6 +169,7 @@ export async function getSessionStats(
     netProfit !== null && session.buyIn > 0 ? netProfit / session.buyIn : null;
 
   const totalBet = hands.reduce((sum, h) => sum + h.bet, 0);
+  const liveNetProfit = hands.reduce((sum, h) => sum + h.payout, 0);
   const avgBet = handsPlayed > 0 ? totalBet / handsPlayed : null;
 
   const biggestWin =
@@ -147,8 +189,24 @@ export async function getSessionStats(
     netProfit,
     roi,
     totalBet,
+    liveNetProfit,
     avgBet,
     biggestWin,
     biggestLoss,
   };
+}
+
+async function recalculateSessionCounters(
+  tx: Prisma.TransactionClient,
+  sessionId: string
+): Promise<void> {
+  const [handsPlayed, handsWon] = await Promise.all([
+    tx.hand.count({ where: { sessionId } }),
+    tx.hand.count({ where: { sessionId, result: { in: ['WIN', 'BLACKJACK'] } } }),
+  ]);
+
+  await tx.casinoSession.update({
+    where: { id: sessionId },
+    data: { handsPlayed, handsWon },
+  });
 }

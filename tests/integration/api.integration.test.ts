@@ -403,3 +403,146 @@ describe('budget', () => {
     expect(hist.body.data[1].amountCents).toBe(40000);
   });
 });
+
+describe('correction flows', () => {
+  async function registerCorrectionUser(): Promise<{ token: string }> {
+    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const userEmail = `itest_correction_${suffix}@example.com`;
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: userEmail, password: 'StrongPass123', name: 'Correction Tester' });
+    expect(res.status).toBe(201);
+    return { token: res.body.data.accessToken as string };
+  }
+
+  async function createCorrectionSession(token: string): Promise<string> {
+    const res = await request(app)
+      .post('/api/v1/sessions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        casinoName: 'Aria',
+        tableMin: 2500,
+        tableMax: 20000,
+        decks: 6,
+        buyIn: 40000,
+        notes: 'Original table notes',
+        moodStart: 3,
+      });
+    expect(res.status).toBe(201);
+    return res.body.data.id as string;
+  }
+
+  test('hand edit and delete recalculates session counters and live profit', async () => {
+    const { token } = await registerCorrectionUser();
+    const correctionSessionId = await createCorrectionSession(token);
+
+    const handRes = await request(app)
+      .post(`/api/v1/sessions/${correctionSessionId}/hands`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        bet: 2500,
+        result: 'LOSS',
+        playerCards: ['10', '6'],
+        dealerCards: ['9', '8'],
+        playerTotal: 16,
+        dealerTotal: 17,
+        payout: -2500,
+      });
+    expect(handRes.status).toBe(201);
+    const handId = handRes.body.data.id as string;
+
+    let sessionRes = await request(app)
+      .get(`/api/v1/sessions/${correctionSessionId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(sessionRes.status).toBe(200);
+    expect(sessionRes.body.data.handsPlayed).toBe(1);
+    expect(sessionRes.body.data.handsWon).toBe(0);
+    expect(sessionRes.body.data.liveNetProfit).toBe(-2500);
+
+    const editRes = await request(app)
+      .patch(`/api/v1/sessions/${correctionSessionId}/hands/${handId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        result: 'WIN',
+        dealerCards: ['9', '6', '5'],
+        dealerTotal: 20,
+        payout: 2500,
+      });
+    expect(editRes.status).toBe(200);
+    expect(editRes.body.data.result).toBe('WIN');
+
+    sessionRes = await request(app)
+      .get(`/api/v1/sessions/${correctionSessionId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(sessionRes.status).toBe(200);
+    expect(sessionRes.body.data.handsPlayed).toBe(1);
+    expect(sessionRes.body.data.handsWon).toBe(1);
+    expect(sessionRes.body.data.liveNetProfit).toBe(2500);
+
+    const deleteRes = await request(app)
+      .delete(`/api/v1/sessions/${correctionSessionId}/hands/${handId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(deleteRes.status).toBe(204);
+
+    const statsRes = await request(app)
+      .get(`/api/v1/sessions/${correctionSessionId}/hands/stats`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(statsRes.status).toBe(200);
+    expect(statsRes.body.data.handsPlayed).toBe(0);
+    expect(statsRes.body.data.handsWon).toBe(0);
+    expect(statsRes.body.data.totalBet).toBe(0);
+    expect(statsRes.body.data.liveNetProfit).toBe(0);
+  });
+
+  test('session edit, reopen, and delete are available for correction', async () => {
+    const { token } = await registerCorrectionUser();
+    const correctionSessionId = await createCorrectionSession(token);
+
+    const editRes = await request(app)
+      .patch(`/api/v1/sessions/${correctionSessionId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        casinoName: 'Aria High Limit',
+        tableMin: 5000,
+        tableMax: 50000,
+        decks: 8,
+        buyIn: 60000,
+        moodStart: 4,
+        notes: 'Corrected table and buy-in.',
+      });
+    expect(editRes.status).toBe(200);
+    expect(editRes.body.data.casinoName).toBe('Aria High Limit');
+    expect(editRes.body.data.tableMin).toBe(5000);
+    expect(editRes.body.data.tableMax).toBe(50000);
+    expect(editRes.body.data.decks).toBe(8);
+    expect(editRes.body.data.buyIn).toBe(60000);
+    expect(editRes.body.data.moodStart).toBe(4);
+
+    const completeRes = await request(app)
+      .patch(`/api/v1/sessions/${correctionSessionId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'COMPLETED', cashOut: 52000, moodEnd: 2 });
+    expect(completeRes.status).toBe(200);
+    expect(completeRes.body.data.status).toBe('COMPLETED');
+    expect(completeRes.body.data.endedAt).toBeString();
+
+    const reopenRes = await request(app)
+      .patch(`/api/v1/sessions/${correctionSessionId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'ACTIVE' });
+    expect(reopenRes.status).toBe(200);
+    expect(reopenRes.body.data.status).toBe('ACTIVE');
+    expect(reopenRes.body.data.endedAt).toBeNull();
+    expect(reopenRes.body.data.cashOut).toBeNull();
+
+    const deleteRes = await request(app)
+      .delete(`/api/v1/sessions/${correctionSessionId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(deleteRes.status).toBe(204);
+
+    const getDeletedRes = await request(app)
+      .get(`/api/v1/sessions/${correctionSessionId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(getDeletedRes.status).toBe(404);
+  });
+});

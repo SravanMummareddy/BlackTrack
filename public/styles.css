@@ -741,7 +741,26 @@ button.session-row {
 
 .subtle-btn:hover { color: var(--ink-soft); }
 
-.danger-btn { color: var(--red); }
+.subtle-btn.danger,
+.danger-btn {
+  color: var(--red);
+}
+
+.subtle-btn.danger:hover {
+  color: #ffb0b0;
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.row-actions .subtle-btn {
+  padding: 4px 6px;
+  font-size: 0.76rem;
+}
 
 /* ── Tabs & chips ───────────────────────────────────── */
 .period-tabs,
