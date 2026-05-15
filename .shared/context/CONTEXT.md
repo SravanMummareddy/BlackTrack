@@ -66,7 +66,7 @@ Design exploration is complete and the backend is partially operational. Three p
 
 | Blocker | Impact | Owner | Notes |
 |---|---|---|---|
-| Handoff script exits nonzero | Medium | Next tooling slice | `bun run handoff` runs tests successfully with DB access, but still reports unrelated local files, `tsc --silent` unsupported by the installed TypeScript CLI, missing ESLint config, and a schema-validation warning. |
+| No active tooling blockers | Low | — | Handoff script, ESLint config, and local generated-file ignore rules were fixed after Slice B merge. |
 | Product scope | Low | Next feature slice | Main constraint is scope; work should proceed in smaller chunks with checkpoints. |
 
 ---
@@ -107,6 +107,7 @@ Metadata run:     2026-05-15 — `node --check public/app.js` passed; `bun run t
 Budget run:       2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; `bun test tests/unit/budget-service.test.ts` passed; `bun test tests/integration/api.integration.test.ts` passed with 10 tests / 109 assertions.
 Merge run:        2026-05-15 — `node --check public/app.js` passed; `bun run typecheck` passed; full `bun test` passed with 44 tests / 2957 assertions. `bun run lint` remains blocked because ESLint has no repo config file.
 Handoff run:      2026-05-15 — `bun run handoff` was rerun with DB access; its test phase passed, but the script exited 1 because of unrelated dirty files, `tsc --silent`, missing ESLint config, and schema-validation warnings.
+Tooling run:      2026-05-15 — added ESLint config, removed invalid `--silent` forwarding from `scripts/handoff.sh`, ignored `.tmp-home-config/`, and verified `bun run lint`, `bun run typecheck`, and full `bun test` pass.
 ```
 
 ---

@@ -31,19 +31,19 @@ fi
 
 # 2. TypeScript compilation
 header "2. TypeScript Check"
-if bun run typecheck --silent 2>/dev/null; then
+if bun run typecheck 2>/dev/null; then
   pass "TypeScript compiles without errors"
 else
-  fail "TypeScript errors found — run 'npm run typecheck' for details"
+  fail "TypeScript errors found — run 'bun run typecheck' for details"
   ERRORS=$((ERRORS + 1))
 fi
 
 # 3. Lint
 header "3. Lint"
-if bun run lint --silent 2>/dev/null; then
+if bun run lint 2>/dev/null; then
   pass "No lint errors"
 else
-  warn "Lint errors found — run 'npm run lint' for details"
+  warn "Lint errors found — run 'bun run lint' for details"
   ERRORS=$((ERRORS + 1))
 fi
 

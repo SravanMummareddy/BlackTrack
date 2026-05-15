@@ -41,3 +41,4 @@ prisma/migrations/dev/
 
 # Generated files
 openai-system-prompt.txt
+.tmp-home-config/

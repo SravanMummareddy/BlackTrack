@@ -6,7 +6,11 @@ set -e
 QUIET=0
 if [ "$1" = "--quiet" ]; then QUIET=1; fi
 
-log() { [ $QUIET -eq 0 ] && echo "$@"; }
+log() {
+  if [ $QUIET -eq 0 ]; then
+    echo "$@"
+  fi
+}
 fail() { echo "ERROR: $*" >&2; exit 1; }
 
 ERRORS=0

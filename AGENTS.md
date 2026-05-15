@@ -4,6 +4,8 @@
 
 ## Agent Toolkit
 
+Skill layout and install workflow for this machine are documented in [SKILLS.md](./SKILLS.md). Read that before changing agent skill configuration or installing shared skills.
+
 All agents working in this repo have access to these Claude Code plugins:
 
 | Plugin | Purpose | Key Commands |
@@ -95,10 +97,11 @@ bun run handoff      # pre-switch validation
 1. `/superpowers:using-superpowers` — orient yourself
 2. Read `.shared/context/CONTEXT.md`
 3. Read `.shared/context/TODO.md`
-4. `/claude-mem:learn-codebase` — prime memory with codebase
-5. `/claude-mem:mem-search` — check what prior sessions accomplished
-6. `bun install && bun test` — verify baseline
-7. Check `.shared/skills/` for relevant patterns
+4. Read `SKILLS.md` if the task touches agent skills, skill installation, or runtime setup
+5. `/claude-mem:learn-codebase` — prime memory with codebase
+6. `/claude-mem:mem-search` — check what prior sessions accomplished
+7. `bun install && bun test` — verify baseline
+8. Check `.shared/skills/` for relevant patterns
 
 ---
 
