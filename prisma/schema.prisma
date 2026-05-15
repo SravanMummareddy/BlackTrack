@@ -46,6 +46,7 @@ model User {
 
   sessions         CasinoSession[]
   strategyAttempts StrategyAttempt[]
+  budgetSettings   BudgetSetting[]
 
   @@index([email])
   @@index([oauthProvider, oauthId])
@@ -80,6 +81,19 @@ model CasinoSession {
 
   @@index([userId])
   @@index([startedAt])
+}
+
+model BudgetSetting {
+  id            String   @id @default(uuid())
+  userId        String
+  amountCents   Int
+  effectiveFrom DateTime
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, effectiveFrom])
+  @@index([userId, effectiveFrom])
 }
 
 model Hand {
