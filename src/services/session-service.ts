@@ -12,6 +12,8 @@ export interface CreateSessionInput {
   notes?: string;
   tags?: string[];
   moodStart?: number;
+  lossLimitCents?: number;
+  timeLimitMinutes?: number;
 }
 
 export interface UpdateSessionInput {
@@ -27,11 +29,24 @@ export interface UpdateSessionInput {
   moodStart?: number;
   moodEnd?: number;
   completionNotes?: string;
+  lossLimitCents?: number | null;
+  timeLimitMinutes?: number | null;
+}
+
+export interface SessionLimitState {
+  lossLimitCents: number | null;
+  timeLimitMinutes: number | null;
+  netLossCents: number;
+  elapsedMinutes: number;
+  lossLimitHit: boolean;
+  timeLimitHit: boolean;
+  anyLimitHit: boolean;
 }
 
 export type SessionWithProfit = CasinoSession & {
   liveNetProfit: number;
   netProfit: number | null;
+  limitState: SessionLimitState;
 };
 
 export interface PaginatedSessions {
@@ -48,6 +63,17 @@ export async function createSession(
   userId: string,
   input: CreateSessionInput
 ): Promise<SessionWithProfit> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { breakUntil: true },
+  });
+  if (!user) throw new NotFoundError('User');
+  if (user.breakUntil && user.breakUntil.getTime() > Date.now()) {
+    throw new ForbiddenError(
+      `Break mode active until ${user.breakUntil.toISOString()}. New sessions are blocked.`
+    );
+  }
+
   const data: Prisma.CasinoSessionUncheckedCreateInput = {
     userId,
     casinoName: input.casinoName,
@@ -58,6 +84,8 @@ export async function createSession(
     notes: input.notes,
     tags: input.tags ?? [],
     moodStart: input.moodStart,
+    lossLimitCents: input.lossLimitCents,
+    timeLimitMinutes: input.timeLimitMinutes,
   };
 
   const session = await prisma.casinoSession.create({
@@ -91,11 +119,15 @@ export async function listSessions(
   );
 
   return {
-    data: sessions.map((s) => ({
-      ...s,
-      liveNetProfit: liveProfitBySession.get(s.id) ?? 0,
-      netProfit: s.cashOut !== null ? s.cashOut - s.buyIn : null,
-    })),
+    data: sessions.map((s) => {
+      const liveNetProfit = liveProfitBySession.get(s.id) ?? 0;
+      return {
+        ...s,
+        liveNetProfit,
+        netProfit: s.cashOut !== null ? s.cashOut - s.buyIn : null,
+        limitState: computeLimitState(s, liveNetProfit),
+      };
+    }),
     pagination: {
       page,
       pageSize,
@@ -134,6 +166,8 @@ export async function updateSession(
   if (input.moodStart !== undefined) data.moodStart = input.moodStart;
   if (input.moodEnd !== undefined) data.moodEnd = input.moodEnd;
   if (input.completionNotes !== undefined) data.completionNotes = input.completionNotes;
+  if (input.lossLimitCents !== undefined) data.lossLimitCents = input.lossLimitCents;
+  if (input.timeLimitMinutes !== undefined) data.timeLimitMinutes = input.timeLimitMinutes;
   if (input.status !== undefined) {
     data.status = input.status;
     if (input.status === 'COMPLETED') {
@@ -162,9 +196,71 @@ async function attachSessionProfit(session: CasinoSession): Promise<SessionWithP
     _sum: { payout: true },
   });
 
+  const liveNetProfit = aggregate._sum.payout ?? 0;
   return {
     ...session,
-    liveNetProfit: aggregate._sum.payout ?? 0,
+    liveNetProfit,
     netProfit: session.cashOut !== null ? session.cashOut - session.buyIn : null,
+    limitState: computeLimitState(session, liveNetProfit),
   };
+}
+
+export function computeLimitState(
+  session: Pick<CasinoSession, 'lossLimitCents' | 'timeLimitMinutes' | 'startedAt' | 'endedAt'>,
+  liveNetProfit: number,
+  now: Date = new Date()
+): SessionLimitState {
+  const referenceEnd = session.endedAt ?? now;
+  const elapsedMs = Math.max(0, referenceEnd.getTime() - session.startedAt.getTime());
+  const elapsedMinutes = Math.floor(elapsedMs / 60000);
+  const netLossCents = liveNetProfit < 0 ? -liveNetProfit : 0;
+
+  const lossLimitHit =
+    session.lossLimitCents !== null && netLossCents >= session.lossLimitCents;
+  const timeLimitHit =
+    session.timeLimitMinutes !== null && elapsedMinutes >= session.timeLimitMinutes;
+
+  return {
+    lossLimitCents: session.lossLimitCents,
+    timeLimitMinutes: session.timeLimitMinutes,
+    netLossCents,
+    elapsedMinutes,
+    lossLimitHit,
+    timeLimitHit,
+    anyLimitHit: lossLimitHit || timeLimitHit,
+  };
+}
+
+export type BreakDuration = '24h' | '7d' | '30d';
+
+export interface BreakState {
+  active: boolean;
+  breakUntil: Date | null;
+}
+
+const BREAK_DURATIONS_MS: Record<BreakDuration, number> = {
+  '24h': 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
+  '30d': 30 * 24 * 60 * 60 * 1000,
+};
+
+export async function getBreakState(userId: string): Promise<BreakState> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { breakUntil: true },
+  });
+  if (!user) throw new NotFoundError('User');
+  const active = user.breakUntil !== null && user.breakUntil.getTime() > Date.now();
+  return { active, breakUntil: user.breakUntil };
+}
+
+export async function setBreak(userId: string, duration: BreakDuration): Promise<BreakState> {
+  const breakUntil = new Date(Date.now() + BREAK_DURATIONS_MS[duration]);
+  await prisma.user.update({ where: { id: userId }, data: { breakUntil } });
+  return { active: true, breakUntil };
+}
+
+export async function clearBreak(userId: string): Promise<BreakState> {
+  await prisma.user.update({ where: { id: userId }, data: { breakUntil: null } });
+  return { active: false, breakUntil: null };
 }

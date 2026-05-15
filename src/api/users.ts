@@ -5,6 +5,7 @@ import { authenticate } from '../middleware';
 import { ValidationError, UnauthorizedError, NotFoundError, ConflictError } from '../utils/errors';
 import { schemas } from '../utils/validation';
 import { hashPassword, verifyPassword } from '../auth/passwords';
+import * as sessionService from '../services/session-service';
 
 const router = Router();
 
@@ -30,6 +31,10 @@ const deleteAccountSchema = z.object({
 
 const statsQuerySchema = z.object({
   period: z.enum(['all', 'year', 'month', 'week']).default('all'),
+});
+
+const setBreakSchema = z.object({
+  duration: z.enum(['24h', '7d', '30d']),
 });
 
 function parseBody<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
@@ -147,6 +152,22 @@ router.delete('/me', asyncHandler(async (req: Request, res: Response) => {
 
   await prisma.user.delete({ where: { id: user.id } });
   res.status(204).send();
+}));
+
+router.get('/me/break', asyncHandler(async (req: Request, res: Response) => {
+  const state = await sessionService.getBreakState(req.userId!);
+  res.status(200).json({ data: state });
+}));
+
+router.put('/me/break', asyncHandler(async (req: Request, res: Response) => {
+  const input = parseBody(setBreakSchema, req.body);
+  const state = await sessionService.setBreak(req.userId!, input.duration);
+  res.status(200).json({ data: state });
+}));
+
+router.delete('/me/break', asyncHandler(async (req: Request, res: Response) => {
+  const state = await sessionService.clearBreak(req.userId!);
+  res.status(200).json({ data: state });
 }));
 
 router.get('/me/stats', asyncHandler(async (req: Request, res: Response) => {

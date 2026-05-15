@@ -41,6 +41,7 @@ model User {
   oauthProvider String?
   oauthId       String?
   role          Role      @default(USER)
+  breakUntil    DateTime? // responsible-play break — blocks new session creation
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -69,6 +70,8 @@ model CasinoSession {
   moodStart  Int?          // 1-5 emoji scale captured on session create
   moodEnd    Int?          // 1-5 emoji scale captured on session complete
   completionNotes String?  // free-form notes captured on session complete
+  lossLimitCents   Int?    // optional per-session loss cap (absolute, in cents). null = no limit
+  timeLimitMinutes Int?    // optional per-session time cap. null = no limit
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 

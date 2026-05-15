@@ -27,6 +27,9 @@ const tagsField = z
   .max(8, 'Use 8 tags or fewer')
   .transform((tags) => Array.from(new Set(tags)));
 
+const lossLimitField = z.number().int().min(0).max(1_000_000_00); // up to $1M in cents
+const timeLimitField = z.number().int().min(1).max(24 * 60); // up to 24h in minutes
+
 const createSchema = z.object({
   casinoName: z.string().min(1, 'Casino name is required').trim(),
   tableMin: centsField,
@@ -36,6 +39,8 @@ const createSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
   tags: tagsField.optional(),
   moodStart: moodField.optional(),
+  lossLimitCents: lossLimitField.optional(),
+  timeLimitMinutes: timeLimitField.optional(),
 }).refine(d => d.tableMax >= d.tableMin, {
   message: 'tableMax must be >= tableMin',
   path: ['tableMax'],
@@ -54,6 +59,8 @@ const updateSchema = z.object({
   moodStart: moodField.optional(),
   moodEnd: moodField.optional(),
   completionNotes: z.string().trim().max(2000).optional(),
+  lossLimitCents: lossLimitField.nullable().optional(),
+  timeLimitMinutes: timeLimitField.nullable().optional(),
 }).refine(d => d.tableMax === undefined || d.tableMin === undefined || d.tableMax >= d.tableMin, {
   message: 'tableMax must be >= tableMin',
   path: ['tableMax'],
