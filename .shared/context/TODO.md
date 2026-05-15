@@ -18,9 +18,11 @@ We are in development phase. Ship every slice end-to-end (schema → API → UI 
    - Change password
    - Export account/session/hand/trainer data as JSON
    - Delete account with cascade cleanup
-4. **Slice C2 — Strategy content verification**
-   - Confirm seeded scenarios and evaluator outputs against reference basic-strategy chart
-   - Add automated coverage for high-risk hard/soft/pair decisions
+4. **Slice C2 — Strategy content verification** (complete)
+   - Independent reference basic-strategy chart locked down in `tests/unit/strategy-reference-chart.test.ts`
+   - Every seeded scenario asserted cell-by-cell vs the reference (350 cells)
+   - Named high-risk hard/soft/pair decisions covered as focused tests
+   - Evaluator agrees end-to-end with reference for every seed scenario
 5. **Slice C — Session limits + break mode**
    - Per-session loss limit, time limit (set at session create)
    - Reflection prompt when limits are hit; option to end or extend
@@ -52,7 +54,7 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] **Session metadata** — Tags, pre/post session mood, and completion notes in API + web app
 - [x] **Baseline correction features** — Edit/delete hands, edit/delete/reopen sessions, and show active-session live P/L
 - [x] **Account lifecycle** — Change password, export JSON, and delete account
-- [ ] **Strategy content verification** — Confirm seeded scenarios and evaluator outputs against a reference basic-strategy chart
+- [x] **Strategy content verification** — Seeded scenarios and evaluator outputs locked against an independent reference basic-strategy chart
 - [x] **Docs/API reference** — Write or refresh endpoint-level docs under `docs/`
 - [x] **Docs template cleanup** — Rewrite architecture, database, deployment, runbook, and style-guide docs around the real app
 - [ ] **Docs + verification slice** — Add a stronger manual smoke-test pass and document it
@@ -147,3 +149,4 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [x] Slice B merge handoff complete: shared context refreshed for merge/push and next slice set to session limits + break mode — 2026-05-15
 - [x] Slice C0 baseline correction complete: hand edit/delete, session edit/delete/reopen, live active-session P/L, API docs, and integration coverage — 2026-05-15
 - [x] Slice C1 account lifecycle complete: password change, credential-safe JSON export, delete account cascade, profile UI controls, API docs, and integration coverage — 2026-05-15
+- [x] Slice C2 strategy content verification complete: independent reference chart, 350-cell coverage, high-risk decision suite, evaluator agreement — 2026-05-15

@@ -10,7 +10,7 @@
 Design exploration is complete and the backend is partially operational. Three prototype iterations still live in `design/` (wireframes → prototype → v2), and `design/prototype.html` is the currently accepted visual/interaction reference. The Express/Prisma backend supports auth, sessions, nested hand logging, overall bankroll stats, strategy training endpoints, account lifecycle controls, and responsible-play budget tracking. A real responsive web app is now being built under `public/`, served by Express, and has working auth, sessions, trainer, budget, correction, and account-management slices, but it is not feature-complete yet.
 
 **Branch**: `main`
-**Last completed slice commit**: Slice C1 account lifecycle controls
+**Last completed slice commit**: Slice C2 strategy content verification
 **Environment**: Development — local only
 
 ---
