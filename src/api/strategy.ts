@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import * as strategyService from '../services/strategy-service';
+import { getReferenceChart } from '../services/strategy-chart';
 import { authenticate } from '../middleware';
 import { ValidationError } from '../utils/errors';
 
@@ -41,6 +42,10 @@ function parseQuery<T extends z.ZodTypeAny>(schema: T, query: unknown): z.infer<
   }
   return result.data;
 }
+
+router.get('/chart', (_req: Request, res: Response) => {
+  res.status(200).json({ data: getReferenceChart() });
+});
 
 router.use(authenticate);
 

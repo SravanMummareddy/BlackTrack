@@ -61,6 +61,15 @@ describe('API integration', () => {
     expect(liveResponse.body.status).toBe('ok');
   });
 
+  test('GET /strategy/chart returns the reference chart (public)', async () => {
+    const res = await request(app).get('/api/v1/strategy/chart');
+    expect(res.status).toBe(200);
+    expect(res.body.data.dealerUpcards).toEqual(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']);
+    expect(res.body.data.hard['16']).toEqual(['S', 'S', 'S', 'S', 'S', 'H', 'H', 'H', 'H', 'H']);
+    expect(res.body.data.soft['7']).toEqual(['S', 'D', 'D', 'D', 'D', 'S', 'S', 'H', 'H', 'H']);
+    expect(res.body.data.pair['A']).toEqual(['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P']);
+  });
+
   test('/healthz returns ok with uptime and timestamp', async () => {
     const res = await request(app).get('/healthz');
     expect(res.status).toBe(200);
