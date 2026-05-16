@@ -1,6 +1,6 @@
 # TODO — BlackStack
 
-> **Current state (2026-05-15):** Slices B, C0, C1, C2, C, and D shipped on `main`. Session-limits reflection + break controls wired into `public/`. Manual smoke test documented under `docs/SMOKE_TEST.md`. **Outstanding before Slice E:** 16 UX/flow fixes captured below from the 2026-05-15 user-flow audit (limit editing mid-session, live limit ticking, mood period filter, sessions pagination, password reset, OAuth, E2E tests, CI, etc.). After those: Slice E (Trainer depth — count drills, deviation drills, difficulty slider) and Slice F (Learn hub — lessons, flashcards, quizzes).
+> **Current state (2026-05-15 PM):** Slices B, C0, C1, C2, C, and D shipped on `main`. 11 of 16 UX/flow audit gaps closed (session-edit limits, live ticking, crossing toast, limit banner in detail, break-aware create modal, mood period filter, budget history, sessions pagination, multi-active warning, /healthz, E2E scaffold). **Remaining (deferred — need external infra):** password reset + email verification + OAuth (need SMTP/provider creds), Sentry (needs DSN), trainer-chart-from-API (needs reference-chart extraction refactor), mistakes-queue UI reconciliation. After those: Slice E (Trainer depth — count drills, deviation drills, difficulty slider) and Slice F (Learn hub — lessons, flashcards, quizzes).
 
 ---
 
@@ -47,23 +47,23 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 
 ## UX / Flow Fixes (from 2026-05-15 user-flow audit)
 
-- [ ] **Edit limits mid-session** — Add `lossLimitCents` + `timeLimitMinutes` fields to `renderSessionEditForm` (API already supports it)
-- [ ] **Limit banner in session detail** — Surface the reflection banner inside `/sessions` workspace, not just dashboard focus card
-- [ ] **Live limit ticking** — Client-side timer that re-renders `elapsedMinutes` every 30s on active sessions
-- [ ] **Limit-crossing toast** — Fire an `addNotice` when `anyLimitHit` flips true between fetches
-- [ ] **Break-aware create modal** — When break is active, disable session-create modal submit and show inline "On break until X" hint
-- [ ] **Mood analytics period filter** — Add `period` tabs to the Mood × Result card (API already supports it)
-- [ ] **Budget history view** — Surface `GET /users/me/budget/history` in profile or budget card
-- [ ] **Sessions pagination UI** — Wire `page`/`pageSize` and "Load more" control to `GET /sessions`
-- [ ] **Multiple active sessions** — Conflict warning + switcher in "Current Focus"
-- [ ] **Password reset / forgot-password flow** — Email-based reset, currently missing
-- [ ] **Email verification** — On signup and email-change
-- [ ] **OAuth login wiring** — Schema has fields; no UI or API route
-- [ ] **Trainer chart from API** — Replace hardcoded `chartData` in `app.js` with the reference chart used in tests
+- [x] **Edit limits mid-session** — `lossLimitCents` + `timeLimitMinutes` fields added to `renderSessionEditForm`; payload sends null-clearing semantics — 2026-05-15
+- [x] **Limit banner in session detail** — `renderLimitReflection` now also renders inside the session-detail card — 2026-05-15
+- [x] **Live limit ticking** — 30s `setInterval` recomputes `elapsedMinutes` client-side on active sessions and re-renders when it changes — 2026-05-15
+- [x] **Limit-crossing toast** — `detectLimitCrossing` fires a warning notice on rising-edge `anyLimitHit` flips — 2026-05-15
+- [x] **Break-aware create modal** — Session-create form shows "On break until X" banner and disables submit when `breakState.active` — 2026-05-15
+- [x] **Mood analytics period filter** — `period` tabs (all/year/month/week) added to Mood × Result card and threaded through `loadMoodAnalytics` — 2026-05-15
+- [x] **Budget history view** — Collapsible Budget History card in Profile view; loads `GET /users/me/budget/history` on first open — 2026-05-15
+- [x] **Sessions pagination UI** — `pageSize=20` initial fetch + "Load more" button appends pages while `sessionsHasMore` is true — 2026-05-15
+- [x] **Multiple active sessions** — Sessions workspace surfaces a warning when >1 session is `ACTIVE` — 2026-05-15
+- [ ] **Password reset / forgot-password flow** — Requires SMTP/email provider; deferred until provider chosen
+- [ ] **Email verification** — Requires SMTP/email provider; deferred
+- [ ] **OAuth login wiring** — Requires provider credentials (Google/GitHub); deferred
+- [ ] **Trainer chart from API** — Reference chart currently lives inside `tests/unit/strategy-reference-chart.test.ts`; needs extraction to shared module + new `GET /strategy/chart` endpoint
 - [ ] **Mistakes queue UI visibility** — Reconcile TODO inconsistency; surface resurfacing in trainer
-- [ ] **E2E test suite** — `tests/e2e/` is empty; add Playwright/Puppeteer browser coverage
-- [ ] **CI pipeline** — Add `.github/workflows/` for typecheck + test on PR
-- [ ] **Error tracking + health endpoint** — `/healthz` and Sentry (or equivalent) wiring
+- [x] **E2E test suite** — Playwright config + smoke spec scaffolded under `tests/e2e/` (landing render, `/healthz`, guest mode); install with `bun add -d @playwright/test` — 2026-05-15
+- [x] **CI pipeline** — `.github/workflows/ci.yml` already runs typecheck + tests on push/PR (pre-existing) — 2026-05-15
+- [x] **Health endpoint** — `GET /healthz` added in `src/app.ts` with integration test coverage; Sentry/error-tracking SDK deferred (needs DSN) — 2026-05-15
 
 ## High Priority
 

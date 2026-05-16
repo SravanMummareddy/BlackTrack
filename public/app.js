@@ -28,9 +28,15 @@ const state = {
   budgetFormOpen: false,
   moodAnalytics: null,
   moodAnalyticsBucket: "start",
+  moodAnalyticsPeriod: "all",
   breakState: null,
   statsPeriod: "all",
   sessions: [],
+  sessionsPage: 1,
+  sessionsPageSize: 20,
+  sessionsHasMore: false,
+  budgetHistory: null,
+  budgetHistoryOpen: false,
   selectedSessionId: null,
   selectedSession: null,
   sessionHands: [],
@@ -100,7 +106,11 @@ const ui = {
   root: document.querySelector("#app"),
 };
 
+// Tracks per-session anyLimitHit so we can fire a toast on rising edge.
+const limitHitState = new Map();
+
 init();
+setInterval(tickActiveSessionLimits, 30_000);
 
 async function init() {
   render();
@@ -153,8 +163,10 @@ async function hydrateApp() {
       loadBreakState(false).catch(() => {
         state.breakState = null;
       }),
-      api("/sessions").then((sessions) => {
+      api(`/sessions?page=1&pageSize=${state.sessionsPageSize}`).then((sessions) => {
         state.sessions = sessions?.data ?? [];
+        state.sessionsPage = 1;
+        state.sessionsHasMore = (sessions?.data?.length ?? 0) >= state.sessionsPageSize;
         state.selectedSessionId = state.sessions[0]?.id ?? null;
         if (state.selectedSessionId) {
           return loadSessionDetails(state.selectedSessionId);
@@ -197,6 +209,7 @@ async function loadSessionDetails(sessionId) {
     state.selectedSession = session;
     state.sessionHands = hands.data;
     state.sessionStats = sessionStats;
+    detectLimitCrossing(session);
   } catch (error) {
     addNotice(error.message || "Could not load session details.", "error");
   } finally {
@@ -557,6 +570,38 @@ function renderDashboardView() {
   `;
 }
 
+function tickActiveSessionLimits() {
+  if (!state.user || !Array.isArray(state.sessions)) return;
+  let changed = false;
+  for (const session of state.sessions) {
+    if (session.status !== "ACTIVE" || !session.startedAt) continue;
+    const elapsed = Math.max(0, Math.floor((Date.now() - new Date(session.startedAt).getTime()) / 60000));
+    if (session.limitState) {
+      if (session.limitState.elapsedMinutes !== elapsed) {
+        session.limitState.elapsedMinutes = elapsed;
+        const timeHit = session.limitState.timeLimitMinutes != null && elapsed >= session.limitState.timeLimitMinutes;
+        const lossHit = session.limitState.lossLimitCents != null && session.limitState.netLossCents >= session.limitState.lossLimitCents;
+        session.limitState.timeLimitHit = timeHit;
+        session.limitState.anyLimitHit = timeHit || lossHit;
+        changed = true;
+      }
+      detectLimitCrossing(session);
+    }
+  }
+  if (changed) render();
+}
+
+function detectLimitCrossing(session) {
+  if (!session?.limitState) return;
+  const wasHit = limitHitState.get(session.id) === true;
+  const nowHit = session.limitState.anyLimitHit === true;
+  limitHitState.set(session.id, nowHit);
+  if (nowHit && !wasHit) {
+    addNotice(`Limit reached on ${session.casinoName}. Take a moment before the next hand.`, "warning");
+    render();
+  }
+}
+
 function renderLimitReflection(limitState) {
   if (!limitState || (!limitState.lossLimitCents && !limitState.timeLimitMinutes)) return "";
   const lossPart = limitState.lossLimitCents
@@ -603,10 +648,43 @@ function renderBreakCard() {
   `;
 }
 
+function renderBudgetHistoryCard() {
+  const open = state.budgetHistoryOpen;
+  const history = state.budgetHistory ?? [];
+  return `
+    <article class="profile-card">
+      <div class="section-head">
+        <div>
+          <h2>Budget History</h2>
+          <p>Past monthly net-loss caps and when they took effect.</p>
+        </div>
+        <button class="ghost-btn" data-action="toggle-budget-history">${open ? "Hide" : "Show"}</button>
+      </div>
+      ${open ? (history.length ? `
+        <div class="session-list">
+          ${history.map((row) => `
+            <div class="session-row">
+              <div class="row-top">
+                <div>
+                  <div class="session-title">${formatMoney(row.amountCents)}</div>
+                  <div class="helper">Effective ${formatDateTime(row.effectiveFrom)}</div>
+                </div>
+                <span class="pill">${formatDateTime(row.createdAt)}</span>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      ` : renderEmptyCard("No budget history yet", "Set a monthly budget to start building a history.")) : ""}
+    </article>
+  `;
+}
+
 function renderMoodAnalyticsCard() {
   const data = state.moodAnalytics;
   const buckets = data?.buckets ?? [];
   const bucketKey = state.moodAnalyticsBucket;
+  const periodKey = state.moodAnalyticsPeriod;
+  const periods = [["all", "All"], ["year", "Year"], ["month", "Month"], ["week", "Week"]];
   return `
     <article class="profile-card">
       <div class="section-head">
@@ -618,6 +696,9 @@ function renderMoodAnalyticsCard() {
           <button class="tab-btn ${bucketKey === "start" ? "active" : ""}" data-action="set-mood-bucket" data-bucket="start">Start</button>
           <button class="tab-btn ${bucketKey === "end" ? "active" : ""}" data-action="set-mood-bucket" data-bucket="end">End</button>
         </div>
+      </div>
+      <div class="period-tabs" style="margin-bottom:8px">
+        ${periods.map(([p, label]) => `<button class="tab-btn ${periodKey === p ? "active" : ""}" data-action="set-mood-period" data-period="${p}">${label}</button>`).join("")}
       </div>
       ${buckets.length
         ? `<div class="session-list">${buckets.map(renderMoodBucketRow).join("")}</div>`
@@ -703,6 +784,7 @@ function renderBudgetCardShell() {
 }
 
 function renderSessionsView() {
+  const activeCount = state.sessions.filter((s) => s.status === "ACTIVE").length;
   return `
     <section class="sessions-grid">
       <article class="session-card">
@@ -713,9 +795,11 @@ function renderSessionsView() {
           </div>
           <button class="primary-btn" data-action="open-modal" data-modal="session-create">New session</button>
         </div>
+        ${activeCount > 1 ? `<div class="feedback warning"><strong>${activeCount} active sessions</strong> — only one table should be open at a time. Complete or delete extras to keep stats clean.</div>` : ""}
         <div class="session-list">
           ${state.sessions.length ? state.sessions.map(renderSessionRow).join("") : renderEmptyCard("No sessions found", "Create a session to unlock hand logging and bankroll stats.")}
         </div>
+        ${state.sessionsHasMore ? `<div class="toolbar" style="justify-content:center;margin-top:12px"><button class="ghost-btn" data-action="load-more-sessions">Load more</button></div>` : ""}
       </article>
       <article class="session-card">
         ${state.loading.session ? `
@@ -756,6 +840,7 @@ function renderSessionDetail() {
       ${renderDetailStat("Win Rate", formatPercent(state.sessionStats?.winRate))}
     </div>
     ${renderSessionMetadata(session)}
+    ${renderLimitReflection(session.limitState)}
     ${session.notes ? `<div class="feedback info"><strong>Notes</strong><br />${escapeHtml(session.notes)}</div>` : ""}
     ${session.completionNotes ? `<div class="feedback info"><strong>Completion Notes</strong><br />${escapeHtml(session.completionNotes)}</div>` : ""}
     <div class="split-row">
@@ -939,6 +1024,7 @@ function renderProfileView() {
         </div>
       </article>
       ${renderBreakCard()}
+      ${renderBudgetHistoryCard()}
       <article class="profile-card">
         <div class="section-head">
           <div>
@@ -1204,7 +1290,10 @@ function renderTagCheckboxes(selectedTags = []) {
 }
 
 function renderSessionCreateForm() {
+  const onBreak = state.breakState?.active === true;
+  const breakUntil = state.breakState?.breakUntil;
   return `
+    ${onBreak ? `<div class="feedback warning"><strong>On break until ${formatDateTime(breakUntil)}.</strong> New sessions are blocked. Clear the break in your profile to resume.</div>` : ""}
     <form class="surface-form" data-form="create-session">
       <div class="field-grid">
         <div class="field">
@@ -1257,7 +1346,7 @@ function renderSessionCreateForm() {
         <label for="session-notes">Notes</label>
         <textarea id="session-notes" name="notes" placeholder="Table energy, focus level, goals for the session."></textarea>
       </div>
-      <button class="primary-btn" type="submit">Create session</button>
+      <button class="primary-btn" type="submit" ${onBreak ? "disabled" : ""}>Create session</button>
     </form>
   `;
 }
@@ -1294,6 +1383,14 @@ function renderSessionEditForm() {
             <option value="">Not set</option>
             ${renderMoodOptions(session.moodStart)}
           </select>
+        </div>
+        <div class="field">
+          <label for="session-edit-loss-limit">Loss Limit ($)</label>
+          <input id="session-edit-loss-limit" name="lossLimitDollars" type="number" min="0" step="1" value="${session.lossLimitCents != null ? Math.round(session.lossLimitCents / 100) : ""}" placeholder="optional" />
+        </div>
+        <div class="field">
+          <label for="session-edit-time-limit">Time Limit (min)</label>
+          <input id="session-edit-time-limit" name="timeLimitMinutes" type="number" min="0" step="1" value="${session.timeLimitMinutes ?? ""}" placeholder="optional" />
         </div>
       </div>
       <div class="field">
@@ -1739,6 +1836,30 @@ async function onActionClick(event) {
     return;
   }
 
+  if (action === "set-mood-period") {
+    const period = event.currentTarget.dataset.period;
+    if (period && period !== state.moodAnalyticsPeriod) {
+      state.moodAnalyticsPeriod = period;
+      await loadMoodAnalytics();
+    }
+    return;
+  }
+
+  if (action === "load-more-sessions") {
+    await loadMoreSessions();
+    return;
+  }
+
+  if (action === "toggle-budget-history") {
+    state.budgetHistoryOpen = !state.budgetHistoryOpen;
+    if (state.budgetHistoryOpen && !state.budgetHistory) {
+      await loadBudgetHistory();
+    } else {
+      render();
+    }
+    return;
+  }
+
   if (action === "dismiss-notice") {
     state.notices.splice(Number(event.currentTarget.dataset.index), 1);
     render();
@@ -1954,6 +2075,19 @@ async function updateSession(formData) {
     moodStart: moodStart || undefined,
   };
 
+  const lossLimitRaw = formData.get("lossLimitDollars");
+  const timeLimitRaw = formData.get("timeLimitMinutes");
+  if (lossLimitRaw !== null && String(lossLimitRaw).trim() !== "") {
+    payload.lossLimitCents = dollarsToCents(lossLimitRaw);
+  } else if (lossLimitRaw !== null) {
+    payload.lossLimitCents = null;
+  }
+  if (timeLimitRaw !== null && String(timeLimitRaw).trim() !== "") {
+    payload.timeLimitMinutes = Number(timeLimitRaw);
+  } else if (timeLimitRaw !== null) {
+    payload.timeLimitMinutes = null;
+  }
+
   await api(`/sessions/${state.selectedSessionId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
@@ -2118,7 +2252,7 @@ async function loadBudget(shouldRender = true) {
 async function loadMoodAnalytics(shouldRender = true) {
   try {
     state.moodAnalytics = await api(
-      `/users/me/mood-analytics?bucket=${state.moodAnalyticsBucket}`
+      `/users/me/mood-analytics?bucket=${state.moodAnalyticsBucket}&period=${state.moodAnalyticsPeriod}`
     );
     if (shouldRender) render();
     return state.moodAnalytics;
@@ -2136,6 +2270,36 @@ async function loadBreakState(shouldRender = true) {
   } catch (error) {
     if (shouldRender) addNotice(error.message || "Could not load break state.", "error");
     throw error;
+  }
+}
+
+function unwrapRows(result) {
+  if (Array.isArray(result)) return result;
+  if (result && Array.isArray(result.data)) return result.data;
+  return [];
+}
+
+async function loadMoreSessions() {
+  const nextPage = state.sessionsPage + 1;
+  try {
+    const result = await api(`/sessions?page=${nextPage}&pageSize=${state.sessionsPageSize}`);
+    const newRows = unwrapRows(result);
+    state.sessions = state.sessions.concat(newRows);
+    state.sessionsPage = nextPage;
+    state.sessionsHasMore = newRows.length >= state.sessionsPageSize;
+    render();
+  } catch (error) {
+    addNotice(error.message || "Could not load more sessions.", "error");
+  }
+}
+
+async function loadBudgetHistory() {
+  try {
+    const result = await api("/users/me/budget/history");
+    state.budgetHistory = unwrapRows(result);
+    render();
+  } catch (error) {
+    addNotice(error.message || "Could not load budget history.", "error");
   }
 }
 

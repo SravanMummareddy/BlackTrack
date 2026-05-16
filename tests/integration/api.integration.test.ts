@@ -61,6 +61,14 @@ describe('API integration', () => {
     expect(liveResponse.body.status).toBe('ok');
   });
 
+  test('/healthz returns ok with uptime and timestamp', async () => {
+    const res = await request(app).get('/healthz');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('ok');
+    expect(typeof res.body.uptime).toBe('number');
+    expect(typeof res.body.timestamp).toBe('string');
+  });
+
   test('auth flow works end to end', async () => {
     const registerResponse = await request(app)
       .post('/api/v1/auth/register')
