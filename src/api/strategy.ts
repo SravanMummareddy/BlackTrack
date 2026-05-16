@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import * as strategyService from '../services/strategy-service';
 import { getReferenceChart } from '../services/strategy-chart';
+import { ILLUSTRIOUS_18 } from '../services/deviation-indices';
+import { generateCountDrill } from '../services/count-drill';
 import { authenticate } from '../middleware';
 import { ValidationError } from '../utils/errors';
 
@@ -45,6 +47,20 @@ function parseQuery<T extends z.ZodTypeAny>(schema: T, query: unknown): z.infer<
 
 router.get('/chart', (_req: Request, res: Response) => {
   res.status(200).json({ data: getReferenceChart() });
+});
+
+router.get('/deviations', (_req: Request, res: Response) => {
+  res.status(200).json({ data: ILLUSTRIOUS_18 });
+});
+
+const countDrillQuerySchema = z.object({
+  cards: z.coerce.number().int().min(4).max(80).default(20),
+  decksRemaining: z.coerce.number().int().min(1).max(8).default(4),
+});
+
+router.get('/count-drill', (req: Request, res: Response) => {
+  const { cards, decksRemaining } = parseQuery(countDrillQuerySchema, req.query);
+  res.status(200).json({ data: generateCountDrill(cards, decksRemaining) });
 });
 
 router.use(authenticate);

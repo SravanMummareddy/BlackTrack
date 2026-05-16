@@ -4,6 +4,7 @@ const PORT = Number(process.env.PORT ?? 3000);
 
 export default defineConfig({
   testDir: '.',
+  testMatch: '**/*.e2e.ts',
   fullyParallel: false,
   reporter: 'list',
   timeout: 30_000,

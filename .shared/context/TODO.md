@@ -1,6 +1,6 @@
 # TODO — BlackStack
 
-> **Current state (2026-05-15 PM):** Slices B, C0, C1, C2, C, and D shipped on `main`. 11 of 16 UX/flow audit gaps closed (session-edit limits, live ticking, crossing toast, limit banner in detail, break-aware create modal, mood period filter, budget history, sessions pagination, multi-active warning, /healthz, E2E scaffold). **Remaining (deferred — need external infra):** password reset + email verification + OAuth (need SMTP/provider creds), Sentry (needs DSN), trainer-chart-from-API (needs reference-chart extraction refactor), mistakes-queue UI reconciliation. After those: Slice E (Trainer depth — count drills, deviation drills, difficulty slider) and Slice F (Learn hub — lessons, flashcards, quizzes).
+> **Current state (2026-05-15 PM):** Slices B, C0, C1, C2, C, D, and **E** shipped on `main`. 13 of 16 UX/flow audit gaps closed (added: trainer chart now served by API; reference chart lives in `src/services/strategy-chart.ts`). Slice E delivers count drills (Hi-Lo running count), deviation drills (Illustrious 18), and difficulty slider (1/2/3). **Remaining (deferred — need external infra):** password reset + email verification + OAuth (SMTP/provider creds), Sentry (DSN), mistakes-queue UI reconciliation. Next on roadmap: Slice F (Learn hub — lessons, flashcards, quizzes).
 
 ---
 
@@ -34,10 +34,10 @@ We are in development phase. Ship every slice end-to-end (schema → API → UI 
    - `GET /users/me/mood-analytics?bucket=start|end&period=...` returning sessions grouped by mood bucket with net P/L, win rate, ROI, hand win rate
    - Dashboard "Mood × Result" card with start/end toggle
    - Integration test asserts buckets and bucket switching
-7. **Slice E — Trainer depth**
-   - Count-drill scenarios (running count / true count)
-   - Strategy-deviation scenarios (illustrious 18)
-   - Difficulty slider in trainer
+7. **Slice E — Trainer depth** (complete — 2026-05-15)
+   - Count-drill scenarios (Hi-Lo running count); `GET /strategy/count-drill`
+   - Strategy-deviation scenarios (Illustrious 18); `GET /strategy/deviations`
+   - Difficulty slider in trainer (any / 1 / 2 / 3) using existing `?difficulty=N`
 8. **Slice F — Learning baseline**
    - Learn hub with lesson, flashcard, and quiz foundation
 
@@ -59,7 +59,7 @@ Each slice ends with: typecheck pass, integration test added or updated, commit,
 - [ ] **Password reset / forgot-password flow** — Requires SMTP/email provider; deferred until provider chosen
 - [ ] **Email verification** — Requires SMTP/email provider; deferred
 - [ ] **OAuth login wiring** — Requires provider credentials (Google/GitHub); deferred
-- [ ] **Trainer chart from API** — Reference chart currently lives inside `tests/unit/strategy-reference-chart.test.ts`; needs extraction to shared module + new `GET /strategy/chart` endpoint
+- [x] **Trainer chart from API** — Reference chart extracted to `src/services/strategy-chart.ts`; served via public `GET /strategy/chart`; client fetches lazily — 2026-05-15
 - [ ] **Mistakes queue UI visibility** — Reconcile TODO inconsistency; surface resurfacing in trainer
 - [x] **E2E test suite** — Playwright config + smoke spec scaffolded under `tests/e2e/` (landing render, `/healthz`, guest mode); install with `bun add -d @playwright/test` — 2026-05-15
 - [x] **CI pipeline** — `.github/workflows/ci.yml` already runs typecheck + tests on push/PR (pre-existing) — 2026-05-15

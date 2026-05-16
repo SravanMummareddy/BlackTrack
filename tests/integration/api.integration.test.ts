@@ -61,6 +61,25 @@ describe('API integration', () => {
     expect(liveResponse.body.status).toBe('ok');
   });
 
+  test('GET /strategy/deviations returns Illustrious 18 (public)', async () => {
+    const res = await request(app).get('/api/v1/strategy/deviations');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBe(18);
+    const sixteenVten = res.body.data.find((d: { id: string }) => d.id === '16v10');
+    expect(sixteenVten).toBeDefined();
+    expect(sixteenVten.deviation).toBe('STAND');
+  });
+
+  test('GET /strategy/count-drill returns a hi-lo drill (public)', async () => {
+    const res = await request(app).get('/api/v1/strategy/count-drill?cards=12&decksRemaining=2');
+    expect(res.status).toBe(200);
+    expect(res.body.data.cards.length).toBe(12);
+    expect(res.body.data.decksRemaining).toBe(2);
+    expect(typeof res.body.data.runningCount).toBe('number');
+    expect(typeof res.body.data.trueCount).toBe('number');
+  });
+
   test('GET /strategy/chart returns the reference chart (public)', async () => {
     const res = await request(app).get('/api/v1/strategy/chart');
     expect(res.status).toBe(200);

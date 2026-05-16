@@ -46,6 +46,14 @@ const state = {
   trainerProgress: null,
   trainerFeedback: null,
   trainerFilter: "mix",
+  trainerMode: "basic",
+  trainerDifficulty: "any",
+  countDrill: null,
+  countDrillAnswer: "",
+  countDrillFeedback: null,
+  deviationIndices: null,
+  deviationDrill: null,
+  deviationDrillFeedback: null,
   trainerStartedAt: null,
   currentView: "dashboard",
   loading: {
@@ -815,6 +823,14 @@ function renderSessionDetail() {
 }
 
 function renderTrainerView() {
+  const mode = state.trainerMode;
+  const modeTabs = [
+    ["basic", "Basic"],
+    ["count", "Count drill"],
+    ["deviation", "Deviations"],
+  ];
+  const dealLabel = mode === "count" ? "New drill" : mode === "deviation" ? "New deviation" : "Deal hand";
+  const dealAction = mode === "count" ? "new-count-drill" : mode === "deviation" ? "new-deviation-drill" : "new-scenario";
   return `
     <section class="trainer-layout">
       <article class="trainer-card trainer-board">
@@ -823,14 +839,21 @@ function renderTrainerView() {
             <h2>Strategy Trainer</h2>
             <p>Pull a live scenario from the API, answer it, and record progress in your real account.</p>
           </div>
-          <button class="primary-btn" data-action="new-scenario">Deal hand</button>
+          <button class="primary-btn" data-action="${dealAction}">${dealLabel}</button>
         </div>
+        <div class="chip-row">
+          ${modeTabs.map(([m, label]) => `<button class="action-chip ${mode === m ? "active" : ""}" data-action="set-trainer-mode" data-mode="${m}">${label}</button>`).join("")}
+        </div>
+        ${mode === "basic" ? `
         <div class="chip-row">
           ${renderTrainerFilter("mix", "All hands")}
           ${renderTrainerFilter("hard", "Hard")}
           ${renderTrainerFilter("soft", "Soft")}
           ${renderTrainerFilter("pair", "Pairs")}
         </div>
+        <div class="chip-row">
+          ${["any", "1", "2", "3"].map((d) => `<button class="action-chip ${state.trainerDifficulty === d ? "active" : ""}" data-action="set-trainer-difficulty" data-difficulty="${d}">${d === "any" ? "Any difficulty" : `Difficulty ${d}`}</button>`).join("")}
+        </div>` : ""}
         <div class="trainer-stats-grid">
           ${renderDetailStat("Attempts", formatCount(state.trainerProgress?.attempts))}
           ${renderDetailStat("Correct", formatCount(state.trainerProgress?.correct))}
@@ -845,14 +868,18 @@ function renderTrainerView() {
               <h3>Dealing…</h3>
               <p>Fetching a strategy scenario from the live backend.</p>
             </div>
-          ` : state.trainerScenario ? renderScenarioBoard() : `
+          ` : mode === "count" ? renderCountDrillBoard()
+            : mode === "deviation" ? renderDeviationDrillBoard()
+            : state.trainerScenario ? renderScenarioBoard() : `
             <div class="empty-state">
               <h3>Ready to train</h3>
               <p>Fetch a random hand to start drilling the strategy engine you already built on the backend.</p>
             </div>
           `}
         </div>
-        ${state.trainerFeedback ? renderTrainerFeedback() : ""}
+        ${mode === "basic" && state.trainerFeedback ? renderTrainerFeedback() : ""}
+        ${mode === "count" && state.countDrillFeedback ? renderCountDrillFeedback() : ""}
+        ${mode === "deviation" && state.deviationDrillFeedback ? renderDeviationDrillFeedback() : ""}
         <div class="session-card">
           <div class="section-head">
             <div>
@@ -910,6 +937,72 @@ function renderScenarioBoard() {
       ${["HIT", "STAND", "DOUBLE", "SPLIT", "SURRENDER"].map((action) => `
         <button class="trainer-action" data-action="submit-attempt" data-value="${action}">${action}</button>
       `).join("")}
+    </div>
+  `;
+}
+
+function renderCountDrillBoard() {
+  const drill = state.countDrill;
+  if (!drill) {
+    return `<div class="empty-state"><h3>Count drill</h3><p>Run a Hi-Lo card stream and call the running count. Click "New drill" to start.</p></div>`;
+  }
+  return `
+    <div class="board-row">
+      <h3>Card stream (${drill.cards.length} cards, ${drill.decksRemaining} decks remaining)</h3>
+      <div class="cards-row" style="flex-wrap:wrap">
+        ${drill.cards.map((card) => `<div class="playing-card">${escapeHtml(card)}</div>`).join("")}
+      </div>
+    </div>
+    <form class="surface-form" data-form="count-drill" style="margin-top:12px">
+      <div class="field-grid">
+        <div class="field">
+          <label for="count-drill-running">Running count</label>
+          <input id="count-drill-running" name="runningCount" type="number" step="1" placeholder="e.g. -3" required />
+        </div>
+      </div>
+      <button class="primary-btn" type="submit">Check</button>
+    </form>
+  `;
+}
+
+function renderCountDrillFeedback() {
+  const fb = state.countDrillFeedback;
+  return `
+    <div class="feedback ${fb.correct ? "success" : "error"}">
+      <strong>${fb.correct ? "Correct." : `Off by ${Math.abs(fb.delta)}.`}</strong>
+      <p>Running count was <strong>${fb.expected}</strong>; true count ${fb.trueCount} across ${fb.decksRemaining} decks.</p>
+      <p class="helper">Hi-Lo: 2–6 = +1, 7–9 = 0, 10/J/Q/K/A = -1. True count = running count ÷ decks remaining.</p>
+      <div class="toolbar"><button class="primary-btn" data-action="new-count-drill">Next drill</button></div>
+    </div>
+  `;
+}
+
+function renderDeviationDrillBoard() {
+  const drill = state.deviationDrill;
+  if (!drill) {
+    return `<div class="empty-state"><h3>Deviation drill</h3><p>Practice the Illustrious 18 — basic-strategy plays that flip based on true count. Click "New deviation" to start.</p></div>`;
+  }
+  return `
+    <div class="board-row">
+      <h3>${escapeHtml(drill.index.label)}</h3>
+      <p>True count: <strong>${drill.trueCount}</strong> · Default play (no count): <strong>${escapeHtml(drill.index.defaultAction)}</strong></p>
+      <p class="helper">Threshold: ${escapeHtml(drill.index.compare)} ${drill.index.threshold}. What's the correct play at this true count?</p>
+    </div>
+    <div class="trainer-actions">
+      ${["HIT", "STAND", "DOUBLE", "SPLIT", "SURRENDER"].map((action) => `
+        <button class="trainer-action" data-action="submit-deviation" data-value="${action}">${action}</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderDeviationDrillFeedback() {
+  const fb = state.deviationDrillFeedback;
+  return `
+    <div class="feedback ${fb.correct ? "success" : "error"}">
+      <strong>${fb.correct ? "Correct play." : `Best play: ${escapeHtml(fb.correctAction)}`}</strong>
+      <p>${escapeHtml(fb.explanation)}</p>
+      <div class="toolbar"><button class="primary-btn" data-action="new-deviation-drill">Next deviation</button></div>
     </div>
   `;
 }
@@ -1775,6 +1868,38 @@ async function onActionClick(event) {
     return;
   }
 
+  if (action === "set-trainer-mode") {
+    state.trainerMode = event.currentTarget.dataset.mode;
+    state.trainerFeedback = null;
+    state.countDrillFeedback = null;
+    state.deviationDrillFeedback = null;
+    render();
+    return;
+  }
+
+  if (action === "set-trainer-difficulty") {
+    state.trainerDifficulty = event.currentTarget.dataset.difficulty;
+    state.trainerFeedback = null;
+    render();
+    await loadTrainerScenario();
+    return;
+  }
+
+  if (action === "new-count-drill") {
+    await loadCountDrill();
+    return;
+  }
+
+  if (action === "new-deviation-drill") {
+    await loadDeviationDrill();
+    return;
+  }
+
+  if (action === "submit-deviation") {
+    submitDeviationAttempt(event.currentTarget.dataset.value);
+    return;
+  }
+
   if (action === "submit-attempt") {
     await submitTrainerAttempt(event.currentTarget.dataset.value);
     return;
@@ -1891,6 +2016,11 @@ async function onFormSubmit(event) {
 
     if (formName === "budget") {
       await saveBudget(formData);
+    }
+
+    if (formName === "count-drill") {
+      submitCountDrill(formData);
+      return;
     }
   } catch (error) {
     addNotice(error.message || "Something went wrong.", "error");
@@ -2557,11 +2687,90 @@ function primeModal(name) {
   }
 }
 
+async function loadCountDrill() {
+  state.loading.trainer = true;
+  state.countDrillFeedback = null;
+  render();
+  try {
+    state.countDrill = await api("/strategy/count-drill?cards=20&decksRemaining=4", {}, false);
+  } catch (error) {
+    addNotice(error.message || "Could not load count drill.", "error");
+  } finally {
+    state.loading.trainer = false;
+    render();
+  }
+}
+
+function submitCountDrill(formData) {
+  const drill = state.countDrill;
+  if (!drill) return;
+  const guess = Number(formData.get("runningCount"));
+  if (!Number.isFinite(guess)) {
+    addNotice("Enter a number.", "error");
+    return;
+  }
+  state.countDrillFeedback = {
+    correct: guess === drill.runningCount,
+    expected: drill.runningCount,
+    delta: guess - drill.runningCount,
+    trueCount: drill.trueCount,
+    decksRemaining: drill.decksRemaining,
+  };
+  render();
+}
+
+async function loadDeviationDrill() {
+  state.loading.trainer = true;
+  state.deviationDrillFeedback = null;
+  render();
+  try {
+    if (!state.deviationIndices) {
+      state.deviationIndices = await api("/strategy/deviations", {}, false);
+    }
+    const indices = state.deviationIndices || [];
+    if (!indices.length) {
+      addNotice("No deviation indices available.", "error");
+      return;
+    }
+    const idx = indices[Math.floor(Math.random() * indices.length)];
+    // Sample a true count within ±2 of the threshold so the answer varies.
+    const trueCount = idx.threshold + (Math.floor(Math.random() * 5) - 2);
+    state.deviationDrill = { index: idx, trueCount };
+  } catch (error) {
+    addNotice(error.message || "Could not load deviation drill.", "error");
+  } finally {
+    state.loading.trainer = false;
+    render();
+  }
+}
+
+function submitDeviationAttempt(action) {
+  const drill = state.deviationDrill;
+  if (!drill) return;
+  const idx = drill.index;
+  const shouldDeviate = idx.compare === "gte"
+    ? drill.trueCount >= idx.threshold
+    : drill.trueCount <= idx.threshold;
+  const correctAction = shouldDeviate ? idx.deviation : idx.defaultAction;
+  state.deviationDrillFeedback = {
+    correct: action === correctAction,
+    correctAction,
+    explanation: shouldDeviate
+      ? `TC ${drill.trueCount} ${idx.compare === "gte" ? "≥" : "≤"} ${idx.threshold} → deviate to ${idx.deviation}.`
+      : `TC ${drill.trueCount} doesn't cross ${idx.threshold} → stay on basic strategy (${idx.defaultAction}).`,
+  };
+  render();
+}
+
 function buildTrainerQuery() {
-  if (state.trainerFilter === "hard") return "?isSoft=false&isPair=false";
-  if (state.trainerFilter === "soft") return "?isSoft=true&isPair=false";
-  if (state.trainerFilter === "pair") return "?isPair=true";
-  return "";
+  const parts = [];
+  if (state.trainerFilter === "hard") parts.push("isSoft=false", "isPair=false");
+  else if (state.trainerFilter === "soft") parts.push("isSoft=true", "isPair=false");
+  else if (state.trainerFilter === "pair") parts.push("isPair=true");
+  if (state.trainerDifficulty && state.trainerDifficulty !== "any") {
+    parts.push(`difficulty=${state.trainerDifficulty}`);
+  }
+  return parts.length ? `?${parts.join("&")}` : "";
 }
 
 async function api(path, init = {}, requireAuth = true, retryOnAuthFailure = true) {
